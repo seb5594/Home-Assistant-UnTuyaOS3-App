@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1-beta.3
+
+- Keep the helper version aligned with the app bundle's Ingress compatibility fix.
+- Document why container hostnames cannot replace authenticated local namespace-descriptor transport.
+
 ## 0.1.1-beta.2
 
 - Fix the startup crash when reading NetworkManager's Boolean Managed property.

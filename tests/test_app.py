@@ -1,4 +1,5 @@
 import contextlib
+from http.client import HTTPConnection
 import importlib.util
 import io
 import json
@@ -213,6 +214,31 @@ class IngressTests(unittest.TestCase):
         except HTTPError as exc:
             return exc.code, exc.read(), exc.headers
 
+    def raw_post(self, path, body, headers, *, csrf=True):
+        connection = HTTPConnection("127.0.0.1", self.http.server_port, timeout=3)
+        try:
+            connection.putrequest("POST", path)
+            if csrf:
+                connection.putheader("X-CSRF-Token", self.http.csrf)
+            for name, value in headers:
+                connection.putheader(name, value)
+            connection.endheaders(body)
+            connection.sock.shutdown(socket.SHUT_WR)
+            response = connection.getresponse()
+            return response.status, json.loads(response.read())
+        finally:
+            connection.close()
+
+    def chunked_post(self, path, chunks, headers=None):
+        connection = HTTPConnection("127.0.0.1", self.http.server_port, timeout=3)
+        try:
+            connection.request("POST", path, body=iter(chunks), encode_chunked=True,
+                               headers={"X-CSRF-Token": self.http.csrf, **(headers or {})})
+            response = connection.getresponse()
+            return response.status, json.loads(response.read())
+        finally:
+            connection.close()
+
     def test_spoofed_forwarding_headers_do_not_bypass_ingress(self):
         code, _, _ = self.request("/", headers={"X-Forwarded-For": "172.30.32.2", "X-Remote-User-Name": "admin"})
         self.assertEqual(code, 403)
@@ -227,6 +253,89 @@ class IngressTests(unittest.TestCase):
         self.assertEqual(self.request("/../../data/options.json")[0], 404)
         self.assertEqual(self.request("/style.css")[0], 200)
         self.assertEqual(self.request("/app.js")[0], 200)
+
+    def test_ingress_streamed_start_input_and_cancel(self):
+        self.trusted()
+        for path, body, method, args in (
+            ("/api/start", b"{}", "start", ()),
+            ("/api/input", b'{"choice":"2"}', "input", ("2",)),
+            ("/api/cancel", b"{}", "cancel", ()),
+        ):
+            with self.subTest(path=path), patch.object(self.runner, method) as operation:
+                code, result = self.chunked_post(path, [body[:1], body[1:]])
+                self.assertEqual((code, result), (200, {"ok": True}))
+                operation.assert_called_once_with(*args)
+
+    def test_ingress_streamed_firmware_upload(self):
+        self.trusted()
+        image = bytes.fromhex("4d4d4d00") + b"x" * 64
+        code, result = self.chunked_post("/api/firmware", [image[:2], image[2:]],
+                                         {"X-Firmware-Platform": "T1", "X-Firmware-Name": "streamed.bin"})
+        self.assertEqual((code, result), (201, {"ok": True}))
+        self.assertEqual((self.root / "T1/streamed.bin").read_bytes(), image)
+
+    def test_streamed_requests_still_require_ingress_and_csrf(self):
+        headers = [("Transfer-Encoding", "chunked")]
+        self.assertEqual(self.raw_post("/api/start", b"2\r\n{}\r\n0\r\n\r\n", headers)[0], 403)
+        self.trusted()
+        self.assertEqual(self.raw_post("/api/start", b"2\r\n{}\r\n0\r\n\r\n", headers, csrf=False)[0], 403)
+
+    def test_body_limits_apply_to_both_framing_modes_before_reading_payload(self):
+        self.trusted()
+        with patch.object(self.runner, "start") as start:
+            for path, limit in (("/api/start", 2048), ("/api/firmware", server.MAX_UPLOAD)):
+                for mode in ("Content-Length", "Transfer-Encoding"):
+                    with self.subTest(path=path, mode=mode):
+                        headers = [(mode, str(limit + 1) if mode == "Content-Length" else "chunked")]
+                        body = b"" if mode == "Content-Length" else f"{limit + 1:x}\r\n".encode()
+                        code, result = self.raw_post(path, body, headers)
+                        self.assertEqual(code, 413)
+                        self.assertIn(str(limit), result["error"])
+            self.assertEqual(self.chunked_post("/api/start", [b"{" + b" " * 1024, b" " * 1024 + b"}"])[0], 413)
+            start.assert_not_called()
+
+    def test_control_body_exactly_at_limit_is_accepted_in_both_framing_modes(self):
+        self.trusted()
+        body = b"{}" + b" " * 2046
+        with patch.object(self.runner, "start") as start:
+            self.assertEqual(self.request("/api/start", body, {"X-CSRF-Token": self.http.csrf})[0], 200)
+            self.assertEqual(self.chunked_post("/api/start", [body[:1000], body[1000:]])[0], 200)
+            self.assertEqual(start.call_count, 2)
+
+    def test_invalid_or_ambiguous_body_framing_is_rejected_and_logged(self):
+        self.trusted()
+        cases = [
+            ([("Content-Length", "2"), ("Transfer-Encoding", "chunked")], b"", 400),
+            ([("Content-Length", "2"), ("Content-Length", "2")], b"", 400),
+            ([("Content-Length", "-1")], b"", 400),
+            ([("Content-Length", "3")], b"{}", 400),
+            ([("Transfer-Encoding", "gzip, chunked")], b"", 400),
+            ([("Transfer-Encoding", "chunked"), ("Transfer-Encoding", "chunked")], b"", 400),
+            ([], b"", 411),
+            ([("Transfer-Encoding", "chunked")], b"+2\r\n{}\r\n0\r\n\r\n", 400),
+            ([("Transfer-Encoding", "chunked")], b"2\n{}\r\n0\r\n\r\n", 400),
+            ([("Transfer-Encoding", "chunked")], b"2\r\n{}xx0\r\n\r\n", 400),
+            ([("Transfer-Encoding", "chunked")], b"4\r\n{}", 400),
+            ([("Transfer-Encoding", "chunked")], b"2\r\n{}\r\n0\r\n", 400),
+            ([("Transfer-Encoding", "chunked")], b"0\r\ninvalid-trailer\r\n\r\n", 400),
+            ([("Transfer-Encoding", "chunked")], b"f" * 1025 + b"\r\n", 400),
+            ([("Transfer-Encoding", "chunked")], b"0\r\n" + (b"X: " + b"x" * 995 + b"\r\n") * 9 + b"\r\n", 400),
+        ]
+        with patch.object(self.runner, "start") as start:
+            for headers, body, status in cases:
+                with self.subTest(headers=headers, body=body):
+                    self.assertEqual(self.raw_post("/api/start?private-query", body, headers)[0], status)
+            start.assert_not_called()
+        events = self.journal.snapshot(0)["events"]
+        self.assertGreaterEqual(sum(e["level"] == "warning" for e in events), len(cases))
+        self.assertFalse(any(self.http.csrf in e["text"] or "private-query" in e["text"] for e in events))
+
+    def test_chunk_extensions_and_trailers_do_not_modify_request_headers(self):
+        self.trusted()
+        with patch.object(self.runner, "start") as start:
+            body = b'2;extension=ignored\r\n{}\r\n0\r\nX-CSRF-Token: ignored\r\n\r\n'
+            self.assertEqual(self.raw_post("/api/start", body, [("Transfer-Encoding", "Chunked")])[0], 200)
+            start.assert_called_once_with()
 
     def test_firmware_signature_filename_and_active_run(self):
         self.trusted()

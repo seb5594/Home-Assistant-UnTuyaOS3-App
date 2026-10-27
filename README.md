@@ -11,13 +11,14 @@
   <a href="https://paypal.me/seb5594"><img src="https://img.shields.io/static/v1?label=Support&amp;message=PayPal&amp;color=0070BA&amp;logo=paypal&amp;logoColor=white&amp;style=for-the-badge" alt="PayPal" height="40"></a>
   <a href="https://buymeacoffee.com/seb5594"><img src="https://img.shields.io/static/v1?label=Support&amp;message=Buy%20Me%20a%20Coffee&amp;color=FFDD00&amp;logo=buy-me-a-coffee&amp;logoColor=black&amp;style=for-the-badge" alt="Buy Me a Coffee" height="40"></a><br>
   <a href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fseb5594%2FHome-Assistant-Apps"><img src="https://img.shields.io/static/v1?label=Home%20Assistant&amp;message=Add%20app%20repository&amp;color=18BCF2&amp;logo=homeassistant&amp;logoColor=white&amp;style=for-the-badge" alt="Home Assistant" height="28"></a>
-  <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/releases/tag/v0.1.1-beta.2"><img src="https://img.shields.io/static/v1?label=version&amp;message=Beta%202&amp;color=1877A5&amp;style=for-the-badge" alt="version" height="28"></a>
+  <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/releases"><img src="https://img.shields.io/static/v1?label=version&amp;message=Beta%203&amp;color=1877A5&amp;style=for-the-badge" alt="version" height="28"></a>
   <img src="https://img.shields.io/static/v1?label=image%20pulls&amp;message=12&amp;color=1877A5&amp;style=for-the-badge" alt="image pulls" height="28"><br>
   <img src="https://img.shields.io/static/v1?label=arch%20%26%20size&amp;message=amd64%20145.7%20%C2%B7%20aarch64%20172.3%20MiB&amp;color=157F71&amp;style=flat" alt="arch &amp; size" height="20">
   <img src="https://img.shields.io/static/v1?label=stage&amp;message=experimental&amp;color=2F855A&amp;style=flat" alt="stage" height="20">
   <img src="https://img.shields.io/static/v1?label=ingress&amp;message=enabled&amp;color=7C3AED&amp;style=flat" alt="ingress" height="20">
   <img src="https://img.shields.io/static/v1?label=mounts%20%28read-write%29&amp;message=share&amp;color=B45309&amp;style=flat" alt="mounts (read-write)" height="20">
   <img src="https://img.shields.io/static/v1?label=privileged&amp;message=NET_ADMIN%2C%20NET_RAW&amp;color=B45309&amp;style=flat" alt="privileged" height="20"><br>
+  <a href="https://github.com/seb5594/Home-Assistant-Apps/stargazers"><img src="https://img.shields.io/github/stars/seb5594/Home-Assistant-UnTuyaOS3-App?label=stars&amp;style=flat" alt="stars" height="20"></a>
   <a href="https://github.com/seb5594/Home-Assistant-Apps/issues"><img src="https://img.shields.io/github/issues/seb5594/Home-Assistant-UnTuyaOS3-App?label=issues&amp;style=flat" alt="issues" height="20"></a>
   <img src="https://img.shields.io/static/v1?label=runtime%20tests&amp;message=3%20passed&amp;color=2F855A&amp;style=flat" alt="runtime tests" height="20">
   <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/seb5594/Home-Assistant-UnTuyaOS3-App/ci.yml?branch=dev&amp;label=checks&amp;style=flat" alt="checks" height="20"></a>
@@ -108,6 +109,8 @@ Logs include discovery, rejection reasons, ownership changes, handover, verbose 
 
 If startup fails, read both apps' **Log** tabs. An exited app cannot serve Ingress, so its final startup error remains available through Home Assistant's logs.
 
+If **Start interactive session** shows **Invalid body length or upload larger than 32 MiB**, update both apps to **0.1.1-beta.3** or later from the Home Assistant app store. Stop the main app, wait for the helper to restore the radio, then update and start the helper before the main app. Reopen **Open Web UI**. Earlier versions rejected the chunked POST requests used by streaming Ingress; even the two-byte start request triggered this misleading error. The corrected server accepts both streamed and fixed-length bodies and logs the received byte count and framing, while retaining all size limits.
+
 After a normal stop, the main app disconnects and resets only the leased interface. When its network namespace is destroyed, Linux returns the radio to the host. The helper checks its identity and idle state, then restores its previous settings. Recovery metadata is written before host changes. If restoration cannot finish, stop the main app and restart the helper from Home Assistant. Device removal, driver faults or host crashes may prevent immediate restoration; logs explain the failure and recovery metadata is retained.
 
 ## Permission boundaries
@@ -126,6 +129,8 @@ After a normal stop, the main app disconnects and resets only the leased interfa
 The Supervisor's `share` mount provides the local Unix socket required for SCM_RIGHTS descriptor passing. The custom enforcing AppArmor profiles allow only `/share/untuyaos3-private/`, excluding unrelated shared files. Do not disable AppArmor.
 
 Both apps mutually authenticate using nonce-based HMAC challenges before passing any namespace descriptor; the secret is never sent over the socket. The helper authenticates requests using the private pairing secret and rejects the host's own network namespace as a destination. It passes the namespace descriptor directly to `iw`; no host PID, Docker socket, `setns` or `SYS_ADMIN` is required.
+
+Container names and internal DNS names are addresses, not credentials. They cannot replace the pairing secret or carry a Linux namespace descriptor over HTTP/TCP. Both apps use the fixed local socket automatically; there is no hostname to configure. Keep the same private secret in both apps' Configuration tabs. Publishing an automatically generated secret in `/share` would expose it to other apps with sufficient access to that mount and weaken this authentication boundary.
 
 The main app accepts numeric menu choices only. Ingress requires the actual Supervisor address `172.30.32.2`; forwarded headers cannot bypass it. Browser mutations need a session token. Output is rendered as text.
 

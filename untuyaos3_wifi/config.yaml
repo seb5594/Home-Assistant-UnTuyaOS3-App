@@ -1,5 +1,5 @@
 name: UnTuyaOS3 Wi-Fi Helper
-version: "0.1.1-beta.2"
+version: "0.1.1-beta.3"
 slug: untuyaos3_wifi
 description: Assigns one checked idle Wi-Fi radio to the isolated UnTuyaOS3 app
 url: https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App

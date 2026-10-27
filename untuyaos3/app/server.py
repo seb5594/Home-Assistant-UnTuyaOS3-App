@@ -16,6 +16,7 @@ import zipfile
 from journal import Journal
 from lease import Lease
 from protocol import validate_options
+from request_body import RequestBodyError, read_body
 from runner import Runner
 
 STATIC = Path(__file__).parent / "static"
@@ -124,14 +125,12 @@ class Handler(BaseHTTPRequestHandler):
         if not hmac.compare_digest(self.headers.get("X-CSRF-Token", "").encode("utf-8"), self.server.csrf.encode("utf-8")):
             return self.reply(403, {"error": "Invalid request token; reload the app"})
         path = urlsplit(self.path).path
+        if path not in ("/api/start", "/api/input", "/api/cancel", "/api/firmware"):
+            return self.reply(404, {"error": "Not found"})
         try:
-            length = int(self.headers.get("Content-Length", "-1"))
             limit = MAX_UPLOAD if path == "/api/firmware" else 2048
-            if length < 0 or length > limit or self.headers.get("Transfer-Encoding"):
-                return self.reply(413, {"error": "Invalid body length or upload larger than 32 MiB"})
-            body = self.rfile.read(length)
-            if len(body) != length:
-                raise ValueError("Incomplete request body")
+            body, framing = read_body(self.headers, self.rfile, limit)
+            self.server.journal.emit("info", f"UI request {path}: {len(body)} bytes received via {framing}")
             if path == "/api/firmware":
                 return self.upload(body)
             request = json.loads(body)
@@ -143,9 +142,11 @@ class Handler(BaseHTTPRequestHandler):
                 self.server.runner.input(request.get("choice"))
             elif path == "/api/cancel":
                 self.server.runner.cancel()
-            else:
-                return self.reply(404, {"error": "Not found"})
             self.reply(200, {"ok": True})
+        except RequestBodyError as exc:
+            self.close_connection = True
+            self.server.journal.emit("warning", f"UI request {path} rejected (HTTP {exc.status}): {exc}")
+            self.reply(exc.status, {"error": str(exc)})
         except (ValueError, KeyError, OSError, RuntimeError) as exc:
             self.server.journal.emit("warning", f"UI operation failed: {type(exc).__name__}: {exc}")
             self.reply(400, {"error": str(exc)})

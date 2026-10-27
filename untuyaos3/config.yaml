@@ -1,5 +1,5 @@
 name: UnTuyaOS3
-version: "0.1.1-beta.2"
+version: "0.1.1-beta.3"
 slug: untuyaos3
 description: Interactive UnTuyaOS3 with an isolated dedicated Wi-Fi radio and live logs
 url: https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1-beta.3
+
+- Fix interactive session startup through Home Assistant's streaming Ingress proxy by accepting chunked POST bodies.
+- Support streamed menu input, cancellation and firmware uploads while enforcing the 2 KiB control and 32 MiB upload limits.
+- Reject malformed or ambiguous request framing with specific HTTP errors and persistent diagnostics.
+- Log accepted UI operations without including request tokens, query strings or payload contents.
+
 ## 0.1.1-beta.2
 
 - Fix busctl JSON parsing for scalar NetworkManager properties and preserve full connection object paths.
