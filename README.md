@@ -100,7 +100,7 @@ After a normal stop, the main app disconnects and resets only the leased interfa
 
 The Supervisor's `share` mount provides the local Unix socket required for SCM_RIGHTS descriptor passing. The custom enforcing AppArmor profiles allow only `/share/untuyaos3-private/`, excluding unrelated shared files. Do not disable AppArmor.
 
-The helper authenticates requests using the private pairing secret and rejects the host's own network namespace as a destination. It passes the namespace descriptor directly to `iw`; no host PID, Docker socket, `setns` or `SYS_ADMIN` is required.
+Both apps mutually authenticate using nonce-based HMAC challenges before passing any namespace descriptor; the secret is never sent over the socket. The helper authenticates requests using the private pairing secret and rejects the host's own network namespace as a destination. It passes the namespace descriptor directly to `iw`; no host PID, Docker socket, `setns` or `SYS_ADMIN` is required.
 
 The main app accepts numeric menu choices only. Ingress requires the actual Supervisor address `172.30.32.2`; forwarded headers cannot bypass it. Browser mutations need a session token. Output is rendered as text.
 

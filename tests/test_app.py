@@ -139,6 +139,33 @@ class LeaseTests(unittest.TestCase):
             with self.assertRaises(OSError):
                 broker.check_target(file.fileno())
 
+    @unittest.skipUnless(sys.platform == "linux", "Linux Unix socket transport")
+    def test_mutual_authentication_and_wrong_secret(self):
+        for correct in (True, False):
+            left, right = socket.socketpair(socket.AF_UNIX, socket.SOCK_SEQPACKET)
+            left.settimeout(2)
+            right.settimeout(2)
+            errors = []
+            def helper():
+                try:
+                    protocol.server_authenticate(right, "wlan1", "private-" * 5)
+                except Exception as exc:
+                    errors.append(exc)
+                finally:
+                    right.close()
+            thread = threading.Thread(target=helper)
+            thread.start()
+            try:
+                if correct:
+                    protocol.client_authenticate(left, "wlan1", "private-" * 5)
+                else:
+                    with self.assertRaises((ValueError, ConnectionError)):
+                        protocol.client_authenticate(left, "wlan1", "incorrect-" * 5)
+            finally:
+                left.close()
+                thread.join(3)
+            self.assertEqual(bool(errors), not correct)
+
     def test_failed_handover_restores_host_state(self):
         adapter = wifi.Adapter("wlan1", "phy0", 4)
         snapshot = {"managed": True, "name": "wlan1", "phy": "phy0"}

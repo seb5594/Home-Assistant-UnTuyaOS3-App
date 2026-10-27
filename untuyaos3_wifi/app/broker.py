@@ -1,5 +1,4 @@
 """Small host-network broker. No HTTP server, shell, Docker socket or host PID access."""
-import hmac
 import json
 import os
 from pathlib import Path
@@ -12,7 +11,7 @@ import threading
 import time
 
 from journal import Journal
-from protocol import SOCKET, receive, secure_directory, send, validate_options
+from protocol import SOCKET, receive, secure_directory, send, server_authenticate, validate_options
 from wifi import NM, PreflightError, bus, command, inspect, nm_unmanaged, parse_interfaces, radio_unblocked
 
 DATA = Path("/data")
@@ -71,6 +70,7 @@ def restore(snapshot, log, wait=30):
         selected = next((i for i in interfaces if i["phy"] == snapshot["phy"]), None)
         if selected:
             name = selected["name"]
+            inspect(selected, interfaces, allow_up=True)
             link = json.loads(command("ip", "-j", "address", "show", "dev", name))[0]
             if link["address"] != snapshot["mac"] or link.get("addr_info") or link.get("master"):
                 raise PreflightError("Returned radio identity/state changed; refusing to restore a different or active adapter")
@@ -163,16 +163,20 @@ def main():
             fds = []
             authenticated = False
             try:
+                server_authenticate(peer, interface, token)
+                authenticated = True
                 request, fds = receive(peer)
-                authenticated = hmac.compare_digest(str(request.get("token", "")).encode("utf-8"), token.encode("utf-8"))
-                if not authenticated or request.get("interface") != interface:
-                    raise ValueError("Pairing token or configured interface mismatch")
+                if request.get("interface") != interface:
+                    raise ValueError("Configured interface mismatch")
                 if len(fds) != 1:
                     raise ValueError("Exactly one network namespace descriptor is required")
 
                 def log(level, text):
                     journal.emit(level, text)
-                    send(peer, {"event": "log", "level": level, "text": text})
+                    try:
+                        send(peer, {"event": "log", "level": level, "text": text})
+                    except OSError:
+                        pass  # Preserve host recovery even if the client disconnects mid-handover.
 
                 adapter, snapshot = handover(fds[0], interface, log)
                 send(peer, {"event": "ready", "phy": adapter.phy})

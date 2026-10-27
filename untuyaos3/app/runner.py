@@ -142,7 +142,11 @@ class Runner:
                         os.killpg(self.process.pid, signal.SIGKILL)
                     except ProcessLookupError:
                         pass
-                    self.process.wait(timeout=5)
+                    try:
+                        self.process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        self.journal.emit("critical", "Process did not exit after SIGKILL; stopping app for recovery")
+                        self.fatal.set()
                 if slave is not None:
                     os.close(slave)
                 if self.master is not None:

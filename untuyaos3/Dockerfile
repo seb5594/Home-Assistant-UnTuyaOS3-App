@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM python:3.13-slim-trixie AS build
+FROM python:3.13-slim-trixie@sha256:d3449c0493345868b09708d7056dce5edda3a75233ea86008fc80c934d355a10 AS build
 ARG UNTUYAOS3_COMMIT=2111458225c269ddddf5353bf09a1e8f1096d959
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl build-essential libssl-dev \
     && rm -rf /var/lib/apt/lists/*
@@ -12,8 +12,8 @@ RUN python -m venv /opt/venv && /opt/venv/bin/pip install --no-cache-dir \
 COPY integration/patch_upstream.py /tmp/patch_upstream.py
 RUN python /tmp/patch_upstream.py /upstream
 
-FROM python:3.13-slim-trixie
-RUN apt-get update && apt-get install -y --no-install-recommends bash iw iproute2 udhcpc systemd tini \
+FROM python:3.13-slim-trixie@sha256:d3449c0493345868b09708d7056dce5edda3a75233ea86008fc80c934d355a10
+RUN apt-get update && apt-get install -y --no-install-recommends bash iw iproute2 udhcpc tini \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=build /opt/venv /opt/venv
 COPY --from=build /upstream /opt/untuyaos3

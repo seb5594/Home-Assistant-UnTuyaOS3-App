@@ -194,6 +194,8 @@ def main():
         lease = Lease(options, journal, fatal)
         runner = Runner(options, journal, fatal, root)
         runner.preflight()
+        if runner.adapter.phy != lease.phy:
+            raise RuntimeError("The assigned physical radio does not match the helper acknowledgement")
         server = Server(("0.0.0.0", 8099), runner, journal, firmware)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()

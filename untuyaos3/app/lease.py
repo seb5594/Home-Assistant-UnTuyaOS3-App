@@ -2,7 +2,7 @@
 import os
 import socket
 import threading
-from protocol import SOCKET, receive, send, validate_options
+from protocol import SOCKET, client_authenticate, receive, send, validate_options
 
 
 class Lease:
@@ -12,10 +12,14 @@ class Lease:
         self.closed = threading.Event()
         try:
             self.sock.settimeout(45)
-            self.sock.connect(SOCKET)
+            try:
+                self.sock.connect(SOCKET)
+            except OSError as exc:
+                raise RuntimeError("Wi-Fi Helper unavailable. Start it first and inspect its Home Assistant Log tab.") from exc
+            client_authenticate(self.sock, interface, token)
             fd = os.open("/proc/self/ns/net", os.O_RDONLY)
             try:
-                send(self.sock, {"interface": interface, "token": token}, fd)
+                send(self.sock, {"interface": interface}, fd)
             finally:
                 os.close(fd)
             while True:

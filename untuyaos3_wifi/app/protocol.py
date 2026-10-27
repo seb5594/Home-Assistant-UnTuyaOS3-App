@@ -1,6 +1,9 @@
 """Authenticated local IPC: namespace descriptors travel over SCM_RIGHTS, never TCP."""
 import array
 import json
+import hashlib
+import hmac
+import secrets
 import os
 from pathlib import Path
 import re
@@ -59,3 +62,48 @@ def receive(sock):
         for fd in descriptors:
             os.close(fd)
         raise
+
+
+def auth_packet(sock):
+    packet, fds = receive(sock)
+    for fd in fds:
+        os.close(fd)
+    if fds:
+        raise ValueError("Namespace descriptors are not accepted before mutual authentication")
+    return packet
+
+
+def proof(secret, direction, challenge, nonce, interface):
+    message = json.dumps([direction, challenge, nonce, interface], separators=(",", ":")).encode()
+    return hmac.new(secret.encode("utf-8"), message, hashlib.sha256).hexdigest()
+
+
+def valid_nonce(value):
+    return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
+
+
+def client_authenticate(sock, interface, secret):
+    challenge = auth_packet(sock).get("challenge")
+    if not valid_nonce(challenge):
+        raise ValueError("Invalid Wi-Fi Helper authentication challenge")
+    nonce = secrets.token_hex(32)
+    send(sock, {"interface": interface, "nonce": nonce,
+                "proof": proof(secret, "client", challenge, nonce, interface)})
+    response = auth_packet(sock).get("proof", "")
+    expected = proof(secret, "server", challenge, nonce, interface)
+    if not isinstance(response, str) or not hmac.compare_digest(response.encode(), expected.encode()):
+        raise ValueError("Wi-Fi Helper authentication failed; check the pairing secret and interface in both apps")
+
+
+def server_authenticate(sock, interface, secret):
+    challenge = secrets.token_hex(32)
+    send(sock, {"challenge": challenge})
+    request = auth_packet(sock)
+    nonce = request.get("nonce")
+    response = request.get("proof", "")
+    if request.get("interface") != interface or not valid_nonce(nonce) or not isinstance(response, str):
+        raise ValueError("Pairing secret or configured interface mismatch")
+    expected = proof(secret, "client", challenge, nonce, interface)
+    if not hmac.compare_digest(response.encode(), expected.encode()):
+        raise ValueError("Pairing secret or configured interface mismatch")
+    send(sock, {"proof": proof(secret, "server", challenge, nonce, interface)})
