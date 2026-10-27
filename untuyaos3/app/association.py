@@ -29,7 +29,7 @@ def access_points(output, ssid):
     for block in re.split(r"(?m)^BSS ", output)[1:]:
         mac = re.match(r"([0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5})(?:\(|\s|$)", block)
         name = re.search(r"(?m)^\s*SSID: (.*)$", block)
-        freq = re.search(r"(?m)^\s*freq: ([0-9]+)\s*$", block)
+        freq = re.search(r"(?m)^\s*freq: ([0-9]+)(?:\.0+)?\s*$", block)
         signal = re.search(r"(?m)^\s*signal: (-?[0-9]+(?:\.[0-9]+)?) dBm", block)
         encrypted = re.search(r"(?m)^\s*(?:RSN:|WPA:|capability:.*\bPrivacy\b)", block)
         if mac and name and name[1] == ssid and freq and not encrypted:
@@ -40,7 +40,7 @@ def access_points(output, ssid):
 def link_matches(output, point):
     mac = re.search(r"(?m)^Connected to ([0-9a-fA-F:]{17})(?:\s|$)", output)
     name = re.search(r"(?m)^\s*SSID: (.*)$", output)
-    freq = re.search(r"(?m)^\s*freq: ([0-9]+)\s*$", output)
+    freq = re.search(r"(?m)^\s*freq: ([0-9]+)(?:\.0+)?\s*$", output)
     return bool(mac and mac[1].lower() == point.bssid and name and name[1] == point.ssid
                 and freq and int(freq[1]) == point.frequency)
 
@@ -81,6 +81,12 @@ def associate(adapter, ssid, log=print, run=command, guard=same_device, wait=tim
         report("Scan cache", (code, scan), log)
         raise AssociationError("Cannot inspect the selected AP before connecting; DHCP was not started")
     points = access_points(scan, ssid)
+    if not points:
+        # The kernel drops stale BSS entries from the dump after ~30 s, so ask the radio for a fresh look.
+        code, scan = run("iw", "dev", adapter.name, "scan", "ssid", ssid, timeout=20)
+        if code:
+            report("Directed scan", (code, scan), log)
+        points = access_points(scan, ssid) if not code else []
     if not points:
         raise AssociationError(f"Selected open AP {ssid!r} is no longer visible; put the device back into AP pairing mode and start a new session")
     point = points[0]
