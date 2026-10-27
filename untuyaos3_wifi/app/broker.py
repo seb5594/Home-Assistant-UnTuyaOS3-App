@@ -18,12 +18,14 @@ DATA = Path("/data")
 stopping = threading.Event()
 
 
-def nm_properties(name):
+def nm_properties(name, log=None):
     path = bus("call", NM, "/org/freedesktop/NetworkManager", NM, "GetDeviceByIpIface", "s", name)
     iface = NM + ".Device"
     managed = bus("get-property", NM, path, iface, "Managed")
     state = bus("get-property", NM, path, iface, "State")
     active = bus("get-property", NM, path, iface, "ActiveConnection")
+    if log:
+        log("info", f"{name}: NetworkManager managed={managed}, state={state}, active={active}")
     # Fail closed for connected, connecting, unavailable and unknown states.
     if state not in (10, 30) or active != "/" or not isinstance(managed, bool):
         raise PreflightError(f"{name}: not idle (NetworkManager state={state}, active={active})")
@@ -53,7 +55,7 @@ def validate_host(name, log):
     selected = next((i for i in interfaces if i["name"] == name), None)
     if not selected:
         raise PreflightError(f"Configured Wi-Fi {name!r} not found; choose its exact name in both app configurations")
-    managed = nm_properties(name)
+    managed = nm_properties(name, log)
     adapter = inspect(selected, interfaces, rfkill=radio_unblocked, allow_up=True)
     if "set_wiphy_netns" not in command("iw", "phy", adapter.phy, "info"):
         raise PreflightError(f"{name}/{adapter.phy}: driver does not advertise set_wiphy_netns; isolation unavailable")

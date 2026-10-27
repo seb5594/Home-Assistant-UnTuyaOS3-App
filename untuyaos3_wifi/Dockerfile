@@ -1,6 +1,6 @@
 ARG BUILD_FROM=python:3.13-slim-trixie@sha256:d3449c0493345868b09708d7056dce5edda3a75233ea86008fc80c934d355a10
 FROM ${BUILD_FROM}
-ARG BUILD_VERSION=0.1.1-beta.1
+ARG BUILD_VERSION=0.1.1-beta.2
 ARG BUILD_ARCH=amd64
 RUN apt-get update && apt-get install -y --no-install-recommends iw iproute2 systemd tini \
     && rm -rf /var/lib/apt/lists/*

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1-beta.2
+
+- Fix busctl JSON parsing for scalar NetworkManager properties and preserve full connection object paths.
+- Reject malformed D-Bus replies with contextual diagnostics and retain the adapter safety checks.
+
 ## 0.1.1-beta.1
 
 - Build and publish both apps through the central hass-workflows pipeline.

@@ -48,8 +48,38 @@ def supported_modes(output):
 
 
 def bus(*args):
-    return json.loads(command("busctl", "--system", "--json=short", "--timeout=5",
-                              "--auto-start=no", "--allow-interactive-authorization=no", *args))["data"][0]
+    """Read one NetworkManager value; method arguments and properties have different JSON shapes."""
+    operation = args[0] if args else ""
+    if operation == "call" and len(args) >= 5:
+        context, signature = args[4], "o"
+    elif operation == "get-property" and len(args) == 5:
+        context = args[-1]
+        signature = {"Managed": "b", "State": "u", "ActiveConnection": "o"}.get(context)
+    else:
+        raise PreflightError(f"Unsupported busctl read operation: {operation}")
+    if signature is None:
+        raise PreflightError(f"Unsupported NetworkManager property: {context}")
+    output = command("busctl", "--system", "--json=short", "--timeout=5",
+                     "--auto-start=no", "--allow-interactive-authorization=no", *args)
+    try:
+        reply = json.loads(output)
+    except json.JSONDecodeError as exc:
+        raise PreflightError(f"busctl {context}: invalid JSON response ({exc.msg})") from exc
+    if not isinstance(reply, dict) or reply.get("type") != signature or "data" not in reply:
+        raise PreflightError(f"busctl {context}: expected a typed '{signature}' response with data")
+    value = reply["data"]
+    if operation == "call":
+        if not isinstance(value, list) or len(value) != 1:
+            raise PreflightError(f"busctl {context}: expected exactly one method return argument")
+        value = value[0]
+    expected = {"b": bool, "u": int, "o": str}[signature]
+    if type(value) is not expected:
+        raise PreflightError(f"busctl {context}: expected {expected.__name__}, received {type(value).__name__}")
+    if signature == "u" and not 0 <= value <= 0xffffffff:
+        raise PreflightError(f"busctl {context}: unsigned integer outside the D-Bus range")
+    if signature == "o" and not re.fullmatch(r"/(?:[A-Za-z0-9_]+(?:/[A-Za-z0-9_]+)*)?", value):
+        raise PreflightError(f"busctl {context}: invalid D-Bus object path")
+    return value
 
 
 def nm_unmanaged(name):
@@ -115,7 +145,7 @@ def inspect(candidate, all_interfaces, run=command, ownership=None, rfkill=None,
 def discover(requested, log, host=False):
     interfaces = parse_interfaces(command("iw", "dev"))
     if not interfaces:
-        raise PreflightError("No wireless interface visible. Assign a dedicated radio with tools/provision.sh first.")
+        raise PreflightError("No assigned wireless interface visible. Start the Wi-Fi Helper first and inspect both apps' Home Assistant Log tabs.")
     log("info", f"Discovered {len(interfaces)} wireless interface(s): {interfaces}")
     if requested != "auto" and requested not in [i["name"] for i in interfaces]:
         raise PreflightError(f"Configured interface {requested!r} does not exist")

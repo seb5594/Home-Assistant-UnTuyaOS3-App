@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1-beta.2
+
+- Fix the startup crash when reading NetworkManager's Boolean Managed property.
+- Correctly parse numeric states and full ActiveConnection paths, with regression coverage.
+- Log the inspected NetworkManager state before checking whether the configured adapter is idle.
+
 ## 0.1.1-beta.1
 
 - Build and publish the Wi-Fi helper with the main app through hass-workflows.
