@@ -84,11 +84,22 @@ class AssociationTests(unittest.TestCase):
 
     def test_missing_or_disappearing_ap_is_rejected_without_selecting_another_ssid(self):
         other = SCAN.replace(SSID, "SmartLife-9999")
-        for initial, refresh, attempts in ((other, SCAN, 0), (SCAN, other, 1)):
+        for initial, refresh, attempts in ((other, other, 0), (SCAN, other, 1)):
             radio = FakeRadio(scan=initial, refresh=refresh)
             with self.subTest(initial=initial), self.assertRaises(association.AssociationError):
                 self.associate(radio)
             self.assertEqual(len(radio.connections()), attempts)
+
+    def test_stale_scan_cache_falls_back_to_directed_scan(self):
+        radio = FakeRadio(scan="", refresh=SCAN, links=[LINK])
+        self.associate(radio)
+        self.assertEqual(len(radio.connections()), 1)
+
+    def test_fractional_frequency_from_newer_iw_is_accepted(self):
+        radio = FakeRadio(scan=SCAN.replace("freq: 2412", "freq: 2412.0"),
+                          links=[LINK.replace("freq: 2412", "freq: 2412.0")])
+        self.associate(radio)
+        self.assertEqual(len(radio.connections()), 1)
 
     def test_adapter_replacement_stops_before_any_mutation(self):
         radio = FakeRadio()
