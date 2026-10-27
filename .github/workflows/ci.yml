@@ -1,93 +1,43 @@
-name: Validate and release apps
+name: Validate and release app
+
 on:
   push:
-    branches: [dev, main]
-    tags: ["v*"]
+    branches: [main, dev]
+    tags: ['v*']
   pull_request:
+  schedule:
+    - cron: '23 4 * * 1' # Weekly: refreshes badge metrics and README values.
   workflow_dispatch:
-permissions:
-  contents: read
-jobs:
-  validate:
-    strategy:
-      fail-fast: false
-      matrix:
-        runner: [ubuntu-24.04, ubuntu-24.04-arm]
-    runs-on: ${{ matrix.runner }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
-        with:
-          python-version: "3.13"
-      - name: Install test tools
-        run: |
-          python -m pip install PyYAML==6.0.3
-          sudo apt-get update
-          sudo apt-get install -y apparmor-utils
-      - name: Check release version and experimental status
-        if: startsWith(github.ref, 'refs/tags/v')
-        env:
-          RELEASE_TAG: ${{ github.ref_name }}
-        run: |
-          python - <<'PY'
-          import os
-          import re
-          from pathlib import Path
-          import yaml
+    inputs:
+      draft:
+        description: Create the release as a draft for review
+        type: boolean
+        default: false
 
-          tag = os.environ["RELEASE_TAG"]
-          assert re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", tag), "Expected a vX.Y.Z release tag"
-          for app in ("untuyaos3", "untuyaos3_wifi"):
-              config = yaml.safe_load((Path(app) / "config.yaml").read_text())
-              assert str(config["version"]) == tag[1:], f"Version mismatch in {app}"
-              assert config.get("stage") == "experimental", f"Keep {app} experimental"
-          PY
-      - name: Test safety decisions, HTTP and Linux PTY / descriptor transport
-        run: python -m unittest discover -s tests -v
-      - name: Check browser JavaScript
-        run: node --check untuyaos3/app/static/app.js
-      - name: Validate and load enforcing AppArmor profiles
-        run: |
-          sudo apparmor_parser -r -T untuyaos3/apparmor.txt
-          sudo apparmor_parser -r -T untuyaos3_wifi/apparmor.txt
-      - name: Build main image
-        run: docker build --tag untuyaos3:test untuyaos3
-      - name: Build helper image
-        run: docker build --tag untuyaos3-wifi:test untuyaos3_wifi
-      - name: Smoke-test images under AppArmor
-        run: |
-          docker run --rm --security-opt apparmor=untuyaos3 --entrypoint python untuyaos3:test -c "import sslpsk3, Crypto, datastruct; import server; import subprocess; subprocess.run(['bash', '/opt/untuyaos3/UnTuyaOS3.sh', '--help'], check=True)"
-          docker run --rm --security-opt apparmor=untuyaos3_wifi --entrypoint python untuyaos3-wifi:test -c "import broker; import subprocess; subprocess.run(['iw', '--version'], check=True); subprocess.run(['busctl', '--version'], check=True)"
-  release:
-    name: Publish experimental prerelease
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: validate
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-    concurrency:
-      group: release-${{ github.ref }}
-      cancel-in-progress: false
-    env:
-      RELEASE_TAG: ${{ github.ref_name }}
+permissions:
+  actions: read # Lets the README refresh see whether the workflow has run.
+  contents: write
+  packages: write
+
+jobs:
+  pipeline:
+    # Repository secrets are not passed to untrusted fork pull requests.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - name: Package the tested source
-        run: |
-          mkdir dist
-          git archive --format=zip --prefix="untuyaos3-${RELEASE_TAG#v}/" \
-            --output="dist/untuyaos3-${RELEASE_TAG#v}.zip" HEAD
-      - name: Create archive checksum
-        working-directory: dist
-        run: sha256sum "untuyaos3-${RELEASE_TAG#v}.zip" > SHA256SUMS.txt
-      - name: Publish GitHub prerelease
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release create "$RELEASE_TAG" \
-            "dist/untuyaos3-${RELEASE_TAG#v}.zip" dist/SHA256SUMS.txt \
-            --verify-tag --prerelease --latest=false \
-            --title "UnTuyaOS3 ${RELEASE_TAG#v} (experimental)" \
-            --notes-file .github/RELEASE_NOTES.md
+      - uses: actions/checkout@v7
+        with:
+          repository: seb5594/hass-workflows
+          ref: fa3556dfac52df4b8615e34002fbd91a08d0aadf
+          token: ${{ secrets.ORCHESTRATION_PAT }}
+          path: .engine
+          persist-credentials: false
+      - uses: ./.engine/.actions/project
+        with:
+          token: ${{ github.token }}
+          draft: ${{ inputs.draft }}
+          catalog-token: ${{ secrets.ORCHESTRATION_PAT }}

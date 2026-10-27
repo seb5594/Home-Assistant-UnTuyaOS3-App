@@ -1,0 +1,12 @@
+"""Project checks executed by hass-workflows before building either app."""
+import shutil
+import subprocess
+import sys
+
+subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"], check=True)
+subprocess.run(["node", "--check", "untuyaos3/app/static/app.js"], check=True)
+if not shutil.which("apparmor_parser"):
+    subprocess.run(["sudo", "apt-get", "update", "-qq"], check=True)
+    subprocess.run(["sudo", "apt-get", "install", "-y", "--no-install-recommends", "apparmor"], check=True)
+for app in ("untuyaos3", "untuyaos3_wifi"):
+    subprocess.run(["apparmor_parser", "-Q", "-T", f"{app}/apparmor.txt"], check=True)

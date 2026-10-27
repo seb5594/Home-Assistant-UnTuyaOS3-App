@@ -7,6 +7,7 @@ profile untuyaos3_wifi flags=(attach_disconnected,mediate_deleted) {
   signal (send, receive),
   capability net_admin,
   / r,
+  /run.sh rix,
   /{bin,sbin,lib,lib32,lib64}/** rixm,
   /usr/{,**} rixm,
   /opt/{,**} rixm,
