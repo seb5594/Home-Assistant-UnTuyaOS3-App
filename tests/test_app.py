@@ -17,6 +17,7 @@ from urllib.error import HTTPError
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "untuyaos3/app"))
+sys.path.insert(1, str(ROOT / "untuyaos3_wifi/app"))
 import wifi
 import protocol
 import dhcp
@@ -117,7 +118,7 @@ class LeaseTests(unittest.TestCase):
         for choice in ("$(id)", "1\n2", "", None, "-1"):
             with self.subTest(choice=choice), self.assertRaises(ValueError):
                 runner.input(choice)
-        for options in ({}, {"interface": "auto", "pairing_token": "a"*32}, {"interface": "wlan1", "pairing_token": "short"}):
+        for options in ({}, {"interface": "wlan1", "pairing_token": "short"}):
             with self.assertRaises(ValueError):
                 protocol.validate_options(options)
 
@@ -277,6 +278,34 @@ class IngressTests(unittest.TestCase):
         self.assertEqual((code, result), (201, {"ok": True}))
         self.assertEqual((self.root / "T1/streamed.bin").read_bytes(), image)
 
+    def test_clear_logs_streamed_and_csrf_protected(self):
+        self.trusted()
+        self.journal.emit("info", "old session output", "terminal")
+        old_generation = self.journal.generation
+        self.assertEqual(self.request("/api/logs/clear", b"{}")[0], 403)
+        code, result = self.chunked_post("/api/logs/clear", [b"{", b"}"])
+        self.assertEqual(code, 200)
+        self.assertNotEqual(result["generation"], old_generation)
+        code, body, _ = self.request("/api/events?after=999&generation=" + old_generation)
+        self.assertEqual(code, 200)
+        self.assertNotIn(b"old session output", body)
+        self.assertIn(b"Logs cleared", body)
+
+    def test_adapter_controls_use_devices_and_require_csrf(self):
+        from unittest.mock import Mock
+        self.trusted()
+        self.http.devices = Mock()
+        for path, body, method, args in (
+            ("/api/adapters/refresh", b"{}", "refresh", ()),
+            ("/api/adapters/select", b'{"interface":"wlan1"}', "choose", ("wlan1",)),
+            ("/api/start", b"{}", "start", ()),
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(self.request(path, body)[0], 403)
+                code, _ = self.chunked_post(path, [body])
+                self.assertEqual(code, 200)
+                getattr(self.http.devices, method).assert_called_once_with(*args)
+
     def test_streamed_requests_still_require_ingress_and_csrf(self):
         headers = [("Transfer-Encoding", "chunked")]
         self.assertEqual(self.raw_post("/api/start", b"2\r\n{}\r\n0\r\n\r\n", headers)[0], 403)
@@ -380,6 +409,8 @@ class PtyTests(unittest.TestCase):
             patch("runner.discover", return_value=runner.adapter),
             patch("runner.same_device"),
             patch("runner.cleanup", return_value=True),
+            patch("runner.Supplicant", return_value=__import__("unittest.mock", fromlist=["MagicMock"]).MagicMock(
+                start=lambda: "/run/fake-wpa", process=__import__("unittest.mock", fromlist=["Mock"]).Mock(poll=lambda: None))),
         ]
         for mock in mocks:
             mock.start()

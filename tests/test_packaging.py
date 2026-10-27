@@ -7,6 +7,14 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class PackagingTests(unittest.TestCase):
+    def test_generated_build_contexts_match_central_source(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("sync_project", ROOT / "tools/sync_project.py")
+        generator = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(generator)
+        for name, expected in generator.outputs().items():
+            self.assertEqual((ROOT / name).read_text(encoding="utf-8"), expected, name)
+
     def test_shared_security_code_stays_in_sync(self):
         for name in ("wifi.py", "protocol.py", "journal.py"):
             self.assertEqual((ROOT / "untuyaos3/app" / name).read_bytes(),

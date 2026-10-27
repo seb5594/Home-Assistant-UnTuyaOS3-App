@@ -2,6 +2,7 @@
 const $ = (id) => document.getElementById(id);
 const token = document.querySelector('meta[name="csrf"]').content;
 let cursor = 0, running = false, polling = false, lastState = "";
+let logGeneration = null, viewEpoch = 0, adapterView = "";
 const terminalLimit = 500000, logLimit = 750000;
 function append(element, text, limit) {
   element.textContent = (element.textContent + text).slice(-limit);
@@ -18,23 +19,68 @@ async function api(path, value = {}, headers = {}) {
   if (!response.ok) throw new Error(result.error || "Request failed");
   return result;
 }
-function controls(state) {
+function controls(state, data = {}) {
   running = state === "running";
   $("state").textContent = state;
   $("state").className = "badge " + state;
-  $("start").disabled = !["ready", "finished", "cancelled", "failed"].includes(state);
+  $("start").disabled = !["ready", "finished", "cancelled", "failed"].includes(state) || Boolean(data.adapter_busy) || !(data.selected_adapter || data.adapter);
   for (const id of ["choice", "send", "cancel"]) $(id).disabled = !running;
   $("upload").disabled = running;
+  $("refresh-adapters").disabled = Boolean(data.adapter_busy) || state === "offline";
+  $("adapter-select").disabled = Boolean(data.selection_locked || data.adapter_busy) || state === "offline";
+}
+function showAdapters(data) {
+  const key = JSON.stringify([data.adapters, data.usb_devices, data.selected_adapter, data.selection_locked, data.adapter_error]);
+  if (key === adapterView) return;
+  adapterView = key;
+  const select = $("adapter-select");
+  select.replaceChildren(new Option("Choose an eligible adapter…", ""));
+  $("adapter-reasons").replaceChildren();
+  for (const entry of data.adapters || []) {
+    const label = [entry.name, entry.driver || "unknown driver", entry.bus || "", entry.leased ? "assigned" : ""].filter(Boolean).join(" · ");
+    const option = new Option(label, entry.name);
+    option.disabled = !entry.eligible;
+    select.append(option);
+    if (entry.reason && !entry.leased) {
+      const reason = document.createElement("li");
+      reason.textContent = entry.name + ": " + entry.reason;
+      $("adapter-reasons").append(reason);
+    }
+  }
+  select.value = data.selected_adapter || "";
+  $("adapter-help").textContent = data.selection_locked
+    ? "This radio is assigned to the app. Restart the main app in Home Assistant to release it before choosing another. The helper stays ready."
+    : data.adapter_error || "One eligible adapter is selected automatically. Choose here when more than one is available.";
+  $("usb-devices").replaceChildren();
+  for (const entry of data.usb_devices || []) {
+    const row = document.createElement("li");
+    row.textContent = entry.product + " (" + entry.id + ", port " + entry.path + ") · driver: " + (entry.drivers.join(", ") || "not bound")
+      + " · Wi-Fi interface: " + (entry.interfaces.join(", ") || "not present on host") + (entry.hint ? " — " + entry.hint : "");
+    $("usb-devices").append(row);
+  }
+  if (!(data.usb_devices || []).length) {
+    const row = document.createElement("li");
+    row.textContent = "No USB Wi-Fi device found by the helper. Plug it in and refresh adapters.";
+    $("usb-devices").append(row);
+  }
 }
 async function poll() {
   if (polling) return;
   polling = true;
+  const epoch = viewEpoch;
   try {
-    const response = await fetch("api/events?after=" + cursor);
+    const response = await fetch("api/events?after=" + cursor + (logGeneration ? "&generation=" + logGeneration : ""));
     if (!response.ok) throw new Error("Ingress connection lost. Reopen the app from Home Assistant.");
     const data = await response.json();
-    controls(data.state);
-    $("adapter").textContent = data.adapter ? data.adapter.name + " · " + data.adapter.phy + " · isolated · AP-capable" : "No adapter";
+    if (epoch !== viewEpoch) return;
+    controls(data.state, data);
+    showAdapters(data);
+    $("adapter").textContent = data.adapter ? data.adapter.name + " · " + data.adapter.phy + " · isolated · AP-capable" : data.selected_adapter ? data.selected_adapter + " · ready to assign on Start" : "Choose a Wi-Fi adapter above";
+    if (logGeneration !== data.generation) {
+      $("terminal").textContent = "";
+      $("logs").textContent = "";
+      logGeneration = data.generation;
+    }
     if (data.gap) append($("logs"), "\n[History truncated. Download the persistent logs for earlier output.]\n", logLimit);
     for (const event of data.events) {
       if (event.channel === "terminal") append($("terminal"), event.text, terminalLimit);
@@ -43,6 +89,8 @@ async function poll() {
     cursor = data.cursor;
     if (lastState !== data.state) {
       notice({ready: "Ready. Start a session, then answer the script's numbered prompts.",
+        select_adapter: data.adapter_error || "Select an eligible Wi-Fi adapter above. Start the helper first if discovery is unavailable.",
+        assigning: "Checking and assigning the selected radio to this app…",
         running: "Session active. Follow the console; submit a menu choice when prompted.",
         finished: "Script finished with exit code " + data.exit_code + ". Review the console and verify your device.",
         cancelled: "Session stopped. Review the logs before trying again.",
@@ -59,6 +107,28 @@ async function poll() {
 $("start").onclick = async () => {
   $("start").disabled = true;
   try { await api("api/start"); await poll(); $("choice").focus(); } catch (error) { notice(error.message, true); }
+};
+$("refresh-adapters").onclick = async () => {
+  $("refresh-adapters").disabled = true;
+  try { await api("api/adapters/refresh"); await poll(); }
+  catch (error) { notice(error.message, true); }
+};
+$("adapter-select").onchange = async () => {
+  const selected = $("adapter-select").value;
+  if (!selected) return;
+  $("start").disabled = true;
+  try { await api("api/adapters/select", {interface: selected}); await poll(); }
+  catch (error) { adapterView = ""; notice(error.message, true); }
+};
+$("clear-logs").onclick = async () => {
+  $("clear-logs").disabled = true;
+  try {
+    const result = await api("api/logs/clear");
+    viewEpoch += 1; cursor = 0; logGeneration = result.generation;
+    $("terminal").textContent = ""; $("logs").textContent = "";
+    notice("Saved logs and both panels cleared. An active session continues.");
+  } catch (error) { notice(error.message, true); }
+  finally { $("clear-logs").disabled = false; }
 };
 $("cancel").onclick = async () => {
   if (!window.confirm("Stop the session? Interrupting a firmware upload may make the device unusable.")) return;

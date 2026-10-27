@@ -10,6 +10,7 @@ import subprocess
 import threading
 import time
 from wifi import cleanup, discover, same_device
+from supplicant import Supplicant
 
 ANSI = re.compile(r"\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1b\\))")
 
@@ -72,18 +73,23 @@ class Runner:
 
     def _run(self):
         slave = None
+        connection = None
         started, heartbeat, terminating = time.monotonic(), time.monotonic(), None
         decoder = codecs.getincrementaldecoder("utf-8")("replace")
         try:
             import fcntl
             import struct
             import termios
+            connection = Supplicant(self.adapter, self.options.get("original_power_save"),
+                                    self.journal.emit, self.cancelled)
+            control_path = connection.start()
             self.master, slave = os.openpty()
             fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 32, 120, 0, 0))
             env = {key: os.environ[key] for key in ("PATH", "LANG") if key in os.environ}
             env.update(PYTHONUNBUFFERED="1", TERM="dumb", LC_ALL="C.UTF-8",
                        UNTUYAOS3_SKIP_INSTALL="1", UNTUYAOS3_ALLOWED_IFACE=self.adapter.name,
                        UNTUYAOS3_ALLOWED_PHY=self.adapter.phy, UNTUYAOS3_ALLOWED_IFINDEX=str(self.adapter.ifindex))
+            env["UNTUYAOS3_WPA_CONTROL"] = control_path
             args = ["bash", str(self.root / "UnTuyaOS3.sh"), "--verbose", "--interface", self.adapter.name]
             self.journal.emit("info", "Starting pinned UnTuyaOS3.sh with verbose TX/RX logging")
             with self.lock:
@@ -98,6 +104,8 @@ class Runner:
                 now = time.monotonic()
                 if now-heartbeat >= 10:
                     same_device(self.adapter)
+                    if connection.process.poll() is not None:
+                        raise RuntimeError("Wi-Fi supplicant stopped unexpectedly; ending this run")
                     self.journal.emit("info", f"Run active for {int(now-started)}s; waiting for menu input, device AP or protocol output")
                     heartbeat = now
                 timed_out = now-started > self.options["run_timeout"]
@@ -153,6 +161,12 @@ class Runner:
                 if self.master is not None:
                     os.close(self.master)
                     self.master = None
+                if connection:
+                    try:
+                        connection.close()
+                    except Exception as exc:
+                        self.journal.emit("critical", f"Wi-Fi connection cleanup failed: {exc}")
+                        self.fatal.set()
                 if not cleanup(self.adapter, self.journal.emit):
                     self.journal.emit("critical", "Cleanup incomplete; stopping app to release the radio")
                     self.fatal.set()

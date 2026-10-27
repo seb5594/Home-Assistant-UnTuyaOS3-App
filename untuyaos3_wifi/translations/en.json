@@ -1,12 +1,8 @@
 {
   "configuration": {
-    "interface": {
-      "name": "Dedicated Wi-Fi interface",
-      "description": "Exact Linux name, e.g. wlan0, wlan1 or wlx. Use the same name in both apps. Integrated and USB Wi-Fi are supported. Never select Home Assistant's active network."
-    },
     "pairing_token": {
       "name": "Pairing secret",
-      "description": "Enter the same private secret of at least 32 characters in both apps."
+      "description": "Enter the same private secret of at least 32 characters in both apps. Select Wi-Fi in the main app's Web UI."
     }
   }
 }

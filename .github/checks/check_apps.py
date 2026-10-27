@@ -3,6 +3,7 @@ import shutil
 import subprocess
 import sys
 
+subprocess.run([sys.executable, "tools/sync_project.py", "--check"], check=True)
 subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"], check=True)
 subprocess.run(["node", "--check", "untuyaos3/app/static/app.js"], check=True)
 if not shutil.which("apparmor_parser"):

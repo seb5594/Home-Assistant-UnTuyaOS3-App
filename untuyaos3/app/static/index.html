@@ -6,9 +6,16 @@
 <title>UnTuyaOS3</title><link rel="stylesheet" href="style.css"><script src="app.js" defer></script>
 </head>
 <body>
-<header><div><span class="eyebrow">HOME ASSISTANT · DEVICE TOOLS</span><h1>UnTuyaOS3<span class="version">0.1</span></h1>
+<header><div><span class="eyebrow">HOME ASSISTANT · DEVICE TOOLS</span><h1>UnTuyaOS3<span class="version">__VERSION__</span></h1>
 <p>Give compatible Tuya devices a new beginning.</p></div><span id="state" class="badge">Connecting…</span></header>
 <main>
+<section class="card adapter-card"><div class="section-heading"><div><span class="eyebrow">1 · CHOOSE YOUR RADIO</span><h2>Wi-Fi adapters</h2></div>
+<button id="refresh-adapters" class="secondary">Refresh adapters</button></div>
+<div class="adapter-settings"><label for="adapter-select">Dedicated Wi-Fi adapter</label><select id="adapter-select" disabled><option value="">Discovering adapters…</option></select>
+<p id="adapter-help" class="hint">One eligible adapter is selected automatically. The host connection stays under Home Assistant's control.</p>
+<ul id="adapter-reasons" class="diagnostic-list"></ul>
+<details><summary>USB Wi-Fi diagnostics</summary><ul id="usb-devices" class="diagnostic-list"></ul>
+<p class="hint">USB detection and a usable Wi-Fi interface are separate checks. If a USB adapter has no Wi-Fi interface, check its port, firmware and driver in Home Assistant's host logs.</p></details></div></section>
 <section class="toolbar card"><div><h2>Dedicated Wi-Fi</h2><p id="adapter">Checking adapter…</p></div>
 <div class="actions"><button id="start" disabled>Start interactive session</button><button id="cancel" class="danger" disabled>Stop session</button>
 <a class="button secondary" href="api/logs" download="untuyaos3-logs.zip">Download logs</a></div></section>
@@ -20,8 +27,8 @@
 <button id="send" disabled>Submit choice ↵</button></form>
 <p class="hint">Answer the numbered prompts above. Your session continues when you close this page.</p></section>
 <section class="card log-card"><div class="section-heading"><div><span class="eyebrow">ALWAYS VISIBLE</span><h2>Activity & diagnostics</h2></div>
-<label class="follow"><input id="follow" type="checkbox" checked> Follow</label></div>
-<pre id="logs" tabindex="0" aria-label="Live diagnostic log"></pre><p class="hint">Adapter checks, protocol output, heartbeat, exit status and cleanup. Logs are saved automatically.</p></section>
+<div class="log-actions"><label class="follow"><input id="follow" type="checkbox" checked> Follow</label><button id="clear-logs" class="secondary">Clear logs</button></div></div>
+<pre id="logs" tabindex="0" aria-label="Live diagnostic log"></pre><p class="hint">Logs start fresh when the app starts. Clear logs deletes saved logs and clears both panels; an active session continues. Retention is limited to 6 MiB.</p></section>
 </div>
 <section class="card firmware-card"><div><span class="eyebrow">FIRMWARE LIBRARY</span><h2>Bring your own UG image</h2>
 <p>Bundled firmware is already available in the script's menu. Additional images stay in this app's private storage.</p></div>

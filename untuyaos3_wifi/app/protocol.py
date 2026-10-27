@@ -11,17 +11,24 @@ import socket
 import stat
 
 SOCKET = "/share/untuyaos3-private/wifi.sock"
-MAX_PACKET = 16384
+MAX_PACKET = 65536
+PROTOCOL_VERSION = json.loads(Path(__file__).with_name("build_info.json").read_text())["protocol"]
+INVENTORY = "@inventory"
 
 
 def validate_options(options):
-    interface = options.get("interface", "")
-    if not re.fullmatch(r"[A-Za-z0-9_.-]{1,15}", interface) or interface == "auto":
-        raise ValueError("Set interface to the exact dedicated Wi-Fi name in both apps' Configuration tabs.")
     token = options.get("pairing_token", "")
     if not isinstance(token, str) or len(token) < 32:
         raise ValueError("Set the same pairing_token (at least 32 characters) in both apps.")
-    return interface, token
+    # Legacy interface options are deliberately ignored. Selection belongs to
+    # the authenticated Web UI; the broker rechecks eligibility on every lease.
+    return "auto", token
+
+
+def validate_interface(name):
+    if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9_.-]{1,15}", name) or name == "auto":
+        raise ValueError("Choose an eligible Wi-Fi adapter in the Web UI")
+    return name
 
 
 def secure_directory(path=SOCKET):
@@ -74,7 +81,7 @@ def auth_packet(sock):
 
 
 def proof(secret, direction, challenge, nonce, interface):
-    message = json.dumps([direction, challenge, nonce, interface], separators=(",", ":")).encode()
+    message = json.dumps([PROTOCOL_VERSION, direction, challenge, nonce, interface], separators=(",", ":")).encode()
     return hmac.new(secret.encode("utf-8"), message, hashlib.sha256).hexdigest()
 
 
@@ -83,27 +90,35 @@ def valid_nonce(value):
 
 
 def client_authenticate(sock, interface, secret):
-    challenge = auth_packet(sock).get("challenge")
+    packet = auth_packet(sock)
+    if packet.get("protocol") != PROTOCOL_VERSION:
+        raise ValueError("Wi-Fi Helper protocol mismatch. Update both apps, then restart the helper and main app")
+    challenge = packet.get("challenge")
     if not valid_nonce(challenge):
         raise ValueError("Invalid Wi-Fi Helper authentication challenge")
     nonce = secrets.token_hex(32)
-    send(sock, {"interface": interface, "nonce": nonce,
+    send(sock, {"protocol": PROTOCOL_VERSION, "interface": interface, "nonce": nonce,
                 "proof": proof(secret, "client", challenge, nonce, interface)})
     response = auth_packet(sock).get("proof", "")
     expected = proof(secret, "server", challenge, nonce, interface)
     if not isinstance(response, str) or not hmac.compare_digest(response.encode(), expected.encode()):
-        raise ValueError("Wi-Fi Helper authentication failed; check the pairing secret and interface in both apps")
+        raise ValueError("Wi-Fi Helper authentication failed; check the pairing secret in both apps")
 
 
 def server_authenticate(sock, interface, secret):
     challenge = secrets.token_hex(32)
-    send(sock, {"challenge": challenge})
+    send(sock, {"protocol": PROTOCOL_VERSION, "challenge": challenge})
     request = auth_packet(sock)
     nonce = request.get("nonce")
     response = request.get("proof", "")
-    if request.get("interface") != interface or not valid_nonce(nonce) or not isinstance(response, str):
-        raise ValueError("Pairing secret or configured interface mismatch")
+    selected = request.get("interface")
+    if request.get("protocol") != PROTOCOL_VERSION or (interface is not None and selected != interface) or not valid_nonce(nonce) or not isinstance(response, str):
+        raise ValueError("Pairing secret, protocol or requested operation mismatch")
+    if selected != INVENTORY:
+        validate_interface(selected)
+    interface = selected
     expected = proof(secret, "client", challenge, nonce, interface)
     if not hmac.compare_digest(response.encode(), expected.encode()):
         raise ValueError("Pairing secret or configured interface mismatch")
     send(sock, {"proof": proof(secret, "server", challenge, nonce, interface)})
+    return interface

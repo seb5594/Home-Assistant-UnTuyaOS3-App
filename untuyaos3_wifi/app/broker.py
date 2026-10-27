@@ -2,6 +2,8 @@
 import json
 import os
 from pathlib import Path
+import re
+import select
 import signal
 import socket
 import stat
@@ -11,7 +13,8 @@ import threading
 import time
 
 from journal import Journal
-from protocol import SOCKET, receive, secure_directory, send, server_authenticate, validate_options
+from protocol import INVENTORY, SOCKET, receive, secure_directory, send, server_authenticate, validate_options
+from inventory import adapter_details, inventory
 from wifi import NM, PreflightError, bus, command, inspect, nm_unmanaged, parse_interfaces, radio_unblocked
 
 DATA = Path("/data")
@@ -54,15 +57,22 @@ def validate_host(name, log):
     log("info", f"Host Wi-Fi inventory: {interfaces}")
     selected = next((i for i in interfaces if i["name"] == name), None)
     if not selected:
-        raise PreflightError(f"Configured Wi-Fi {name!r} not found; choose its exact name in both app configurations")
+        raise PreflightError(f"Selected Wi-Fi {name!r} not found; refresh adapters in the main Web UI")
     managed = nm_properties(name, log)
     adapter = inspect(selected, interfaces, rfkill=radio_unblocked, allow_up=True)
     if "set_wiphy_netns" not in command("iw", "phy", adapter.phy, "info"):
         raise PreflightError(f"{name}/{adapter.phy}: driver does not advertise set_wiphy_netns; isolation unavailable")
     link = json.loads(command("ip", "-j", "link", "show", "dev", name))[0]
     log("info", f"Host checks passed for {name}: idle, no addresses/routes, sole interface on AP-capable {adapter.phy}")
+    power_save = None
+    try:
+        match = re.fullmatch(r"Power save: (on|off)", command("iw", "dev", name, "get", "power_save").strip())
+        power_save = match[1] if match else None
+    except PreflightError as exc:
+        log("info", f"Power-saving state unavailable for {name}: {exc}")
     return adapter, {"name": name, "phy": adapter.phy, "mac": link["address"],
-                     "up": "UP" in link.get("flags", []), "managed": managed}
+                     "up": "UP" in link.get("flags", []), "managed": managed,
+                     "power_save": power_save, **adapter_details(name)}
 
 
 def restore(snapshot, log, wait=30):
@@ -79,6 +89,10 @@ def restore(snapshot, log, wait=30):
             if command("iw", "dev", name, "link").strip() != "Not connected.":
                 raise PreflightError("Returned radio has an active link; refusing restoration")
             # Only the dedicated radio is touched. Never restart network managers.
+            if snapshot.get("power_save") in ("on", "off"):
+                command("ip", "link", "set", "dev", name, "up")
+                command("iw", "dev", name, "set", "power_save", snapshot["power_save"])
+                log("info", f"Restored {name} power saving: {snapshot['power_save']}")
             command("ip", "link", "set", "dev", name, "up" if snapshot["up"] else "down")
             nm_set(name, snapshot["managed"])
             log("info", f"Restored dedicated radio {name}: up={snapshot['up']}, managed={snapshot['managed']}")
@@ -126,13 +140,12 @@ def main():
     try:
         options = json.loads((DATA / "options.json").read_text())
         journal.emit("info", f"Available host wireless interfaces: {parse_interfaces(command('iw', 'dev'))}")
-        interface, token = validate_options(options)
-        journal.emit("info", f"Wi-Fi Helper starting for configured interface {interface}; no HTTP listener")
+        _, token = validate_options(options)
+        journal.emit("info", "Wi-Fi Helper starting; adapter selection is available in the main Web UI; no HTTP listener")
         if (DATA / "recovery.json").exists():
             journal.emit("warning", "Recovering an interrupted previous assignment")
             restore(json.loads((DATA / "recovery.json").read_text()), journal.emit)
-        # Validate on startup, so unsupported AP hardware stops the helper immediately.
-        validate_host(interface, journal.emit)
+        journal.emit("info", "Initial inventory: " + json.dumps(inventory(validate_host, journal.emit)))
         secure_directory()
         path = Path(SOCKET)
         if path.exists() or path.is_symlink():
@@ -156,57 +169,63 @@ def main():
         server.listen(4)
         server.settimeout(1)
         journal.emit("info", "Ready. Start the UnTuyaOS3 app in Home Assistant.")
-        while not stopping.is_set() and snapshot is None:
-            try:
-                peer, _ = server.accept()
-            except socket.timeout:
+        while not stopping.is_set():
+            readable, _, _ = select.select([server] + ([peer] if peer else []), [], [], 1)
+            if peer and peer in readable:
+                if peer.recv(1):
+                    raise ValueError("Unexpected data on active lease")
+                peer.close()
+                peer = None
+                restore(snapshot, journal.emit)
+                snapshot = None
+                journal.emit("info", "Radio returned. Ready for another main-app session")
+            if server not in readable:
                 continue
-            peer.settimeout(5)
+            client, _ = server.accept()
+            client.settimeout(5)
             fds = []
-            authenticated = False
             try:
-                server_authenticate(peer, interface, token)
-                authenticated = True
-                request, fds = receive(peer)
+                interface = server_authenticate(client, None, token)
+                request, fds = receive(client)
+                if interface == INVENTORY:
+                    if request.get("operation") != "inventory" or fds:
+                        raise ValueError("Inventory requests must not contain namespace descriptors")
+                    send(client, inventory(validate_host, journal.emit, snapshot))
+                    continue
+                if snapshot is not None:
+                    raise ValueError("A radio is already assigned. Restart the main app before selecting another adapter")
+                if request.get("operation") != "lease":
+                    raise ValueError("Unknown helper operation")
                 if request.get("interface") != interface:
-                    raise ValueError("Configured interface mismatch")
+                    raise ValueError("Authenticated interface mismatch")
                 if len(fds) != 1:
                     raise ValueError("Exactly one network namespace descriptor is required")
 
                 def log(level, text):
                     journal.emit(level, text)
                     try:
-                        send(peer, {"event": "log", "level": level, "text": text})
+                        send(client, {"event": "log", "level": level, "text": text})
                     except OSError:
                         pass  # Preserve host recovery even if the client disconnects mid-handover.
 
                 adapter, snapshot = handover(fds[0], interface, log)
-                send(peer, {"event": "ready", "phy": adapter.phy})
+                peer, client = client, None
+                send(peer, {"event": "ready", "phy": adapter.phy, "power_save": snapshot["power_save"]})
+                journal.emit("info", "Lease active. Discovery remains available; the radio returns when the main app stops")
             except Exception as exc:
-                journal.emit("error", f"Assignment rejected: {exc}")
+                journal.emit("error", f"Helper request rejected: {exc}")
                 try:
-                    send(peer, {"error": str(exc)})
+                    send(client or peer, {"error": str(exc), "restart_required": snapshot is not None or (DATA / "recovery.json").exists()})
                 except OSError:
                     pass
-                peer.close()
-                peer = None
-                if authenticated:
+                if snapshot is not None and client is None:
                     raise
             finally:
                 # Do not pin the client's netns: kernel must return its radio on app stop.
                 for fd in fds:
                     os.close(fd)
-        if snapshot:
-            server.close()
-            server = None
-            journal.emit("info", "Lease active; waiting for UnTuyaOS3 to stop before restoring the radio")
-            peer.settimeout(1)
-            while not stopping.is_set():
-                try:
-                    if not peer.recv(1):
-                        break
-                except socket.timeout:
-                    continue
+                if client:
+                    client.close()
     except Exception as exc:
         journal.emit("critical", f"Wi-Fi Helper stopped: {type(exc).__name__}: {exc}")
         return_code = 1

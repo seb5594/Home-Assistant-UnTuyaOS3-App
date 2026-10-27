@@ -1,0 +1,46 @@
+{
+  "version": "0.2.0-beta.1",
+  "protocol": 2,
+  "base_image": "ghcr.io/home-assistant/base-python:3.13-alpine3.24@sha256:c7d34ae22a87275d46deb65bcb0511b389d7bc6eb8dccb28d44dd7cb8616e603",
+  "upstream_revision": "2111458225c269ddddf5353bf09a1e8f1096d959",
+  "python_packages": {"pycryptodome": "3.23.0", "py-datastruct": "2.0.0", "sslpsk3": "2.1.0"},
+  "packages": {
+    "bash": "5.3.9-r1", "build-base": "0.5-r4", "busctl": "255.24-r0",
+    "busybox": "1.37.0-r31", "ca-certificates": "20261020-r0", "curl": "8.23.0-r0",
+    "iproute2": "7.0.0-r0", "iw": "6.17-r0", "openssl-dev": "3.5.9-r0",
+    "tini": "0.19.0-r3", "wpa_supplicant": "2.11-r4"
+  },
+  "build_packages": ["build-base", "openssl-dev", "curl", "ca-certificates"],
+  "common_config": {
+    "url": "https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App",
+    "arch": ["amd64", "aarch64"], "startup": "application", "boot": "manual_only",
+    "stage": "experimental", "init": false, "apparmor": true,
+    "map": [{"type": "share", "read_only": false}]
+  },
+  "common_options": {"pairing_token": ""},
+  "common_schema": {"pairing_token": "password"},
+  "apps": {
+    "untuyaos3": {
+      "config": {"name": "UnTuyaOS3", "description": "Interactive UnTuyaOS3 with adapter selection, isolated Wi-Fi and live logs", "timeout": 30,
+        "ingress": true, "ingress_port": 8099, "ingress_stream": true, "panel_title": "UnTuyaOS3", "panel_icon": "mdi:chip", "panel_admin": true,
+        "privileged": ["NET_ADMIN", "NET_RAW"]},
+      "options": {"run_timeout": 1800}, "schema": {"run_timeout": "int(60,7200)"},
+      "packages": ["bash", "iw", "iproute2", "busybox", "tini", "wpa_supplicant"]
+    },
+    "untuyaos3_wifi": {
+      "config": {"name": "UnTuyaOS3 Wi-Fi Helper", "description": "Discovers idle Wi-Fi adapters and assigns one to the isolated UnTuyaOS3 app", "timeout": 60,
+        "host_network": true, "host_dbus": true, "privileged": ["NET_ADMIN"]},
+      "options": {}, "schema": {}, "packages": ["iw", "iproute2", "busctl", "tini"]
+    }
+  },
+  "translations": {
+    "en": {
+      "pairing_token": {"name": "Pairing secret", "description": "Enter the same private secret of at least 32 characters in both apps. Select Wi-Fi in the main app's Web UI."},
+      "run_timeout": {"name": "Session timeout", "description": "Maximum session duration in seconds, including menu input and connection attempts (60–7200)."}
+    },
+    "de": {
+      "pairing_token": {"name": "Kopplungsgeheimnis", "description": "In beiden Apps dasselbe private Geheimnis mit mindestens 32 Zeichen eintragen. WLAN wird in der WebUI der Haupt-App ausgewählt."},
+      "run_timeout": {"name": "Zeitlimit der Sitzung", "description": "Maximale Sitzungsdauer in Sekunden, einschließlich Menüeingabe und Verbindungsversuchen (60–7200)."}
+    }
+  }
+}

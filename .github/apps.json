@@ -1,3 +1,6 @@
 {
-  "apps": ["untuyaos3", "untuyaos3_wifi"]
+  "apps": [
+    "untuyaos3",
+    "untuyaos3_wifi"
+  ]
 }

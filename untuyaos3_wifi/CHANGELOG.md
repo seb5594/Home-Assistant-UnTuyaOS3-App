@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0-beta.1
+
+- Select Wi-Fi in the main Web UI; automatically select the only eligible adapter and explain rejected/USB-only devices.
+- Keep the authenticated helper available for discovery and subsequent main-app sessions; update both apps together (protocol v2).
+- Use a private nl80211 wpa_supplicant with bounded association retries and independent link verification before DHCP.
+- Temporarily disable power saving only on the selected radio and restore its original setting.
+- Add Clear logs; start with fresh app logs and retain at most 6 MiB per app.
+- Generate configs, Dockerfiles, metadata and translations from project.json; maintain common Python sources in shared/.
+- Build on the pinned official Home Assistant Python 3.13 / Alpine 3.24 base image.
+
 ## 0.1.1-beta.6
 
 - Relicense the project under the MIT License.

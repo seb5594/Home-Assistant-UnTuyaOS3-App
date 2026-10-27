@@ -14,7 +14,7 @@ from urllib.parse import parse_qs, urlsplit
 import zipfile
 
 from journal import Journal
-from lease import Lease
+from devices import Devices
 from protocol import validate_options
 from request_body import RequestBodyError, read_body
 from runner import Runner
@@ -49,9 +49,10 @@ def prepare_firmware(root, data):
 class Server(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, address, runner, journal, firmware):
+    def __init__(self, address, runner, journal, firmware, devices=None):
         super().__init__(address, Handler)
         self.runner, self.journal, self.firmware = runner, journal, firmware
+        self.devices = devices
         self.csrf = secrets.token_urlsafe(32)
 
 
@@ -94,16 +95,20 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urlsplit(self.path)
         if parsed.path in ("/", "/index.html"):
             page = (STATIC / "index.html").read_text(encoding="utf-8").replace("__CSRF__", self.server.csrf)
+            page = page.replace("__VERSION__", json.loads(Path(__file__).with_name("build_info.json").read_text())["version"])
             return self.reply(200, page, "text/html; charset=utf-8")
         if parsed.path in ("/app.js", "/style.css"):
             mime = "text/javascript" if parsed.path.endswith(".js") else "text/css"
             return self.reply(200, (STATIC / parsed.path[1:]).read_bytes(), mime + "; charset=utf-8")
         if parsed.path == "/api/events":
+            query = parse_qs(parsed.query)
             try:
-                after = max(0, int(parse_qs(parsed.query).get("after", ["0"])[0]))
+                after = max(0, int(query.get("after", ["0"])[0]))
             except (ValueError, IndexError):
                 return self.reply(400, {"error": "Invalid cursor"})
-            return self.reply(200, {**self.server.journal.snapshot(after), **self.server.runner.status()})
+            devices = self.server.devices.status() if self.server.devices else {}
+            return self.reply(200, {**self.server.journal.snapshot(after, query.get("generation", [None])[0]),
+                                   **self.server.runner.status(), **devices})
         if parsed.path == "/api/firmware":
             return self.reply(200, {"files": {platform: sorted(f.name for f in (self.server.firmware / platform).glob("*.bin"))
                                              for platform in MAGIC}})
@@ -125,7 +130,7 @@ class Handler(BaseHTTPRequestHandler):
         if not hmac.compare_digest(self.headers.get("X-CSRF-Token", "").encode("utf-8"), self.server.csrf.encode("utf-8")):
             return self.reply(403, {"error": "Invalid request token; reload the app"})
         path = urlsplit(self.path).path
-        if path not in ("/api/start", "/api/input", "/api/cancel", "/api/firmware"):
+        if path not in ("/api/start", "/api/input", "/api/cancel", "/api/firmware", "/api/logs/clear", "/api/adapters/refresh", "/api/adapters/select"):
             return self.reply(404, {"error": "Not found"})
         try:
             limit = MAX_UPLOAD if path == "/api/firmware" else 2048
@@ -137,11 +142,20 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(request, dict):
                 raise ValueError("Expected a JSON object")
             if path == "/api/start":
-                self.server.runner.start()
+                (self.server.devices or self.server.runner).start()
             elif path == "/api/input":
                 self.server.runner.input(request.get("choice"))
             elif path == "/api/cancel":
                 self.server.runner.cancel()
+            elif path == "/api/logs/clear":
+                return self.reply(200, {"ok": True, "generation": self.server.journal.clear()})
+            elif path in ("/api/adapters/refresh", "/api/adapters/select"):
+                if self.server.devices is None:
+                    raise ValueError("Adapter discovery is not available")
+                if path.endswith("refresh"):
+                    self.server.devices.refresh()
+                else:
+                    self.server.devices.choose(request.get("interface"))
             self.reply(200, {"ok": True})
         except RequestBodyError as exc:
             self.close_connection = True
@@ -178,7 +192,7 @@ def main():
     data, root = Path("/data"), Path("/opt/untuyaos3")
     journal = Journal(data / "logs")
     fatal = threading.Event()
-    runner, lease, server = None, None, None
+    runner, devices, server = None, None, None
     requested_stop = threading.Event()
     for sig in (signal.SIGTERM, signal.SIGINT):
         signal.signal(sig, lambda *_: requested_stop.set())
@@ -189,18 +203,16 @@ def main():
         if type(timeout) is not int or not 60 <= timeout <= 7200:
             raise ValueError("run_timeout must be 60..7200 seconds")
         options["run_timeout"] = timeout
-        journal.emit("info", f"App starting; requested Wi-Fi={options['interface']}; isolated network; no host API access")
+        journal.emit("info", "App starting with fresh logs; select Wi-Fi in the Web UI; isolated network; no host API access")
         journal.emit("info", "Pinned upstream revision: " + (root / "UPSTREAM_COMMIT").read_text().strip())
         firmware = prepare_firmware(root, data)
-        lease = Lease(options, journal, fatal)
         runner = Runner(options, journal, fatal, root)
-        runner.preflight()
-        if runner.adapter.phy != lease.phy:
-            raise RuntimeError("The assigned physical radio does not match the helper acknowledgement")
-        server = Server(("0.0.0.0", 8099), runner, journal, firmware)
+        devices = Devices(options, runner, journal, fatal, data)
+        server = Server(("0.0.0.0", 8099), runner, journal, firmware, devices)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
-        journal.emit("info", "Ingress ready. Open Web UI; select Start to launch the interactive script.")
+        threading.Thread(target=devices.initialize, daemon=True).start()
+        journal.emit("info", "Ingress ready. Open Web UI to select or refresh adapters, then start a session")
         while not requested_stop.wait(0.25):
             if fatal.is_set():
                 raise RuntimeError("Fatal adapter/lease error; app must stop")
@@ -216,8 +228,8 @@ def main():
             server.server_close()
         if runner:
             runner.shutdown()
-        if lease:
-            lease.close()
+        if devices:
+            devices.close()
         journal.close()
     return result
 

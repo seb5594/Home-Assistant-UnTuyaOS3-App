@@ -9,6 +9,7 @@ import sys
 import time
 
 from wifi import Adapter, same_device
+from supplicant import Control
 
 
 class AssociationError(RuntimeError):
@@ -73,59 +74,73 @@ def diagnostics(adapter, log, run):
         report(label, run(*args), log)
 
 
-def associate(adapter, ssid, log=print, run=command, guard=same_device, wait=time.sleep):
+def associate(adapter, ssid, log=print, run=command, guard=same_device, wait=time.sleep,
+              control=None, checks=45):
     guard(adapter)
+    if not ssid or len(ssid.encode("utf-8")) > 32 or any(ord(c) < 32 for c in ssid):
+        raise AssociationError("Invalid selected SSID")
     diagnostics(adapter, log, run)
     code, scan = run("iw", "dev", adapter.name, "scan", "dump")
-    if code:
-        report("Scan cache", (code, scan), log)
-        raise AssociationError("Cannot inspect the selected AP before connecting; DHCP was not started")
-    points = access_points(scan, ssid)
+    points = access_points(scan, ssid) if code == 0 else []
     if not points:
-        # The kernel drops stale BSS entries from the dump after ~30 s, so ask the radio for a fresh look.
         code, scan = run("iw", "dev", adapter.name, "scan", "ssid", ssid, timeout=20)
-        if code:
-            report("Directed scan", (code, scan), log)
-        points = access_points(scan, ssid) if not code else []
-    if not points:
-        raise AssociationError(f"Selected open AP {ssid!r} is no longer visible; put the device back into AP pairing mode and start a new session")
-    point = points[0]
-    for attempt in range(1, 4):
-        guard(adapter)
-        log(f"Association attempt {attempt}/3: SSID={point.ssid!r}; BSSID={point.bssid}; "
-            f"frequency={point.frequency} MHz; signal={point.signal:g} dBm")
-        report("Disconnect previous attempt", run("iw", "dev", adapter.name, "disconnect"), log)
-        # iw -w may exit zero even after a failed connect event. Its status is
-        # diagnostic only: require a matching live BSSID, SSID and frequency.
-        result = run("iw", "dev", adapter.name, "connect", "-w", point.ssid,
-                     str(point.frequency), point.bssid, "auth", "open", timeout=15)
-        report("Connect event", result, log)
-        for check in range(3):
+        points = access_points(scan, ssid) if code == 0 else []
+    point = points[0] if points else None
+    if point:
+        log(f"Selected open AP: SSID={ssid!r}; BSSID={point.bssid}; frequency={point.frequency} MHz; signal={point.signal:g} dBm")
+        if point.signal < -85:
+            log("Weak received signal: check the computer's Wi-Fi antennas or choose another adapter. Distance alone does not establish good reception")
+    else:
+        log(f"Selected SSID {ssid!r} temporarily missing from scan; supplicant will rescan within the connection deadline")
+    if control is None:
+        raise AssociationError("Private supplicant control is missing; DHCP was not started")
+    network = control.request("ADD_NETWORK")
+    if not re.fullmatch(r"[0-9]+", network):
+        raise AssociationError(f"Cannot create private Wi-Fi network: {network}")
+    success = False
+    def checked(message):
+        reply = control.request(message)
+        if reply != "OK":
+            raise AssociationError(f"Supplicant rejected {message.split()[0]}: {reply}")
+    try:
+        # Hex encoding prevents SSID text from becoming a control command/config directive.
+        settings = {"ssid": ssid.encode("utf-8").hex(), "key_mgmt": "NONE", "auth_alg": "OPEN", "scan_ssid": "1"}
+        if point:
+            settings["bssid"] = point.bssid
+        for field, value in settings.items():
+            checked(f"SET_NETWORK {network} {field} {value}")
+        checked(f"SELECT_NETWORK {network}")
+        last_state = None
+        for check in range(checks):
             guard(adapter)
-            code, link = run("iw", "dev", adapter.name, "link")
-            report(f"Link verification {check + 1}/3", (code, link), log)
-            if code == 0 and link_matches(link, point):
-                log("Wi-Fi association verified against the selected AP; DHCP may now start")
-                return
-            if check < 2:
+            status = dict(line.split("=", 1) for line in control.request("STATUS").splitlines() if "=" in line)
+            state = status.get("wpa_state", "UNKNOWN")
+            if state != last_state or check % 5 == 0:
+                log(f"Association {check + 1}/{checks}: state={state}; selected SSID={ssid!r}; DHCP blocked until link verification")
+                last_state = state
+            if state == "COMPLETED" and status.get("ssid") == ssid:
+                mac, frequency = status.get("bssid", "").lower(), status.get("freq", "")
+                if re.fullmatch(r"[0-9a-f]{2}(?::[0-9a-f]{2}){5}", mac) and frequency.isdigit() and (point is None or mac == point.bssid):
+                    live = AccessPoint(ssid, mac, int(frequency), point.signal if point else float("-inf"))
+                    code, link = run("iw", "dev", adapter.name, "link")
+                    report("Independent link verification", (code, link), log)
+                    if code == 0 and link_matches(link, live):
+                        success = True
+                        log("Wi-Fi association verified against the selected AP; DHCP may now start")
+                        return
+            # Let nl80211 own association/retries; do not interrupt it with competing iw scans.
+            if check + 1 < checks:
                 wait(1)
-        if attempt < 3:
-            log("Association not established. Retrying only the same selected SSID; DHCP remains blocked")
-            wait(2)
-            guard(adapter)
-            code, scan = run("iw", "dev", adapter.name, "scan", "freq", str(point.frequency), timeout=20)
-            if code:
-                report("Target-channel rescan", (code, scan), log)
-            else:
-                points = access_points(scan, ssid)
-                if not points:
-                    raise AssociationError(f"Selected AP {ssid!r} disappeared on {point.frequency} MHz; restore AP pairing mode and start a new session. DHCP was not started")
-                point = points[0]
-    diagnostics(adapter, log, run)
-    raise AssociationError("Wi-Fi association failed after 3 attempts; DHCP was not started and no firmware was transferred. "
-                           "Keep the lamp powered in AP pairing mode and close to the adapter. If this repeats, "
-                           "try an AP-capable USB Wi-Fi adapter by selecting its interface in both app configurations. "
-                           "Review the driver, signal and connect events above")
+        diagnostics(adapter, log, run)
+        raise AssociationError("Wi-Fi association deadline reached; DHCP was not started and no firmware was transferred. "
+                               "Restore the lamp's AP pairing mode, check antennas and reception, or select another adapter in the Web UI")
+    finally:
+        if not success:
+            for message in (f"DISABLE_NETWORK {network}", f"REMOVE_NETWORK {network}"):
+                try:
+                    control.request(message)
+                except OSError:
+                    pass
 
 
 def main():
@@ -138,7 +153,11 @@ def main():
     if not re.fullmatch(r"phy[0-9]+", phy):
         raise AssociationError("Missing approved radio identity")
     adapter = Adapter(name, phy, int(os.environ["UNTUYAOS3_ALLOWED_IFINDEX"]))
-    associate(adapter, ssid, log=lambda text: print("[Wi-Fi] " + text, flush=True))
+    path = os.environ.get("UNTUYAOS3_WPA_CONTROL")
+    if not path:
+        raise AssociationError("Missing private Wi-Fi controller")
+    with Control(path) as control:
+        associate(adapter, ssid, control=control, log=lambda text: print("[Wi-Fi] " + text, flush=True))
 
 
 if __name__ == "__main__":

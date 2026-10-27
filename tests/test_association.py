@@ -43,11 +43,27 @@ class FakeRadio:
         return [args for args, _ in self.calls if "connect" in args]
 
 
+class FakeControl:
+    def __init__(self, completed=True, transient=0, ssid=SSID, reject=False):
+        self.completed, self.transient, self.ssid, self.reject = completed, transient, ssid, reject
+        self.calls, self.status_calls = [], 0
+
+    def request(self, message):
+        self.calls.append(message)
+        if message == "ADD_NETWORK":
+            return "0"
+        if message == "STATUS":
+            self.status_calls += 1
+            state = "COMPLETED" if self.completed and self.status_calls > self.transient else "SCANNING"
+            return f"wpa_state={state}\nssid={self.ssid}\nbssid={MAC}\nfreq=2412"
+        return "FAIL" if self.reject and message.startswith("SET_NETWORK") else "OK"
+
+
 class AssociationTests(unittest.TestCase):
     def associate(self, radio, **kwargs):
         self.logs = []
         return association.associate(ADAPTER, SSID, log=self.logs.append, run=radio,
-                                     wait=lambda _: None, **{"guard": lambda _: None, **kwargs})
+                                     wait=lambda _: None, checks=6, **{"guard": lambda _: None, **kwargs})
 
     def test_scan_selects_strongest_exact_open_ssid_only(self):
         weaker = SCAN.replace(MAC, "20:f1:b2:d7:08:03").replace("-42.00", "-75.00")
@@ -59,47 +75,45 @@ class AssociationTests(unittest.TestCase):
         self.assertEqual(points[0].frequency, 2412)
         self.assertEqual(points[0].signal, -42)
 
-    def test_timeout_with_zero_exit_code_is_not_success(self):
-        radio = FakeRadio()
+    def test_disconnected_status_never_allows_dhcp(self):
         with self.assertRaisesRegex(association.AssociationError, "DHCP was not started"):
-            self.associate(radio)
-        self.assertEqual(len(radio.connections()), 3)
-        self.assertTrue(any("timed out" in line for line in self.logs))
+            self.associate(FakeRadio(), control=FakeControl(completed=False))
         self.assertFalse(any("DHCP may now start" in line for line in self.logs))
 
-    def test_verified_live_link_allows_dhcp_after_transient_failure(self):
-        radio = FakeRadio(links=["Not connected.\n"] * 3 + [LINK])
-        self.associate(radio)
-        self.assertEqual(len(radio.connections()), 2)
-        for args in radio.connections():
-            self.assertEqual(args, ("iw", "dev", "wlp2s0", "connect", "-w", SSID, "2412", MAC, "auth", "open"))
+    def test_transient_scan_miss_and_disconnection_recover(self):
+        control = FakeControl(transient=3)
+        self.associate(FakeRadio(scan="", refresh="", links=[LINK]), control=control)
         self.assertIn("DHCP may now start", self.logs[-1])
+        self.assertEqual(control.status_calls, 4)
+        self.assertFalse(any("REMOVE_NETWORK" in call for call in control.calls))
+        self.assertIn("SET_NETWORK 0 ssid " + SSID.encode().hex(), control.calls)
 
-    def test_other_bssid_ssid_or_frequency_never_counts_as_success(self):
-        wrong_links = [LINK.replace(MAC, "20:f1:b2:d7:08:04"), LINK.replace(SSID, "SmartLife-0804"),
-                       LINK.replace("2412", "2437"), LINK.replace("\tfreq: 2412\n", "")]
-        for link in wrong_links:
+    def test_completed_status_requires_independent_matching_link(self):
+        for link in ("Not connected.", LINK.replace(MAC, "20:f1:b2:d7:08:04"),
+                     LINK.replace(SSID, "other"), LINK.replace("2412", "2437")):
+            control = FakeControl()
             with self.subTest(link=link), self.assertRaises(association.AssociationError):
-                self.associate(FakeRadio(links=[link] * 9))
+                self.associate(FakeRadio(links=[link]*6), control=control)
+            self.assertIn("REMOVE_NETWORK 0", control.calls)
 
-    def test_missing_or_disappearing_ap_is_rejected_without_selecting_another_ssid(self):
-        other = SCAN.replace(SSID, "SmartLife-9999")
-        for initial, refresh, attempts in ((other, other, 0), (SCAN, other, 1)):
-            radio = FakeRadio(scan=initial, refresh=refresh)
-            with self.subTest(initial=initial), self.assertRaises(association.AssociationError):
-                self.associate(radio)
-            self.assertEqual(len(radio.connections()), attempts)
+    def test_selected_bssid_pinned_and_fractional_iw_frequency_accepted(self):
+        control = FakeControl()
+        self.associate(FakeRadio(scan=SCAN.replace("2412", "2412.0"), links=[LINK.replace("2412", "2412.0")]), control=control)
+        self.assertIn("SET_NETWORK 0 bssid " + MAC, control.calls)
 
-    def test_stale_scan_cache_falls_back_to_directed_scan(self):
-        radio = FakeRadio(scan="", refresh=SCAN, links=[LINK])
-        self.associate(radio)
-        self.assertEqual(len(radio.connections()), 1)
+    def test_other_ssid_in_status_rejected(self):
+        control = FakeControl(ssid="SmartLife-9999")
+        with self.assertRaises(association.AssociationError):
+            self.associate(FakeRadio(links=[LINK]*6), control=control)
 
-    def test_fractional_frequency_from_newer_iw_is_accepted(self):
-        radio = FakeRadio(scan=SCAN.replace("freq: 2412", "freq: 2412.0"),
-                          links=[LINK.replace("freq: 2412", "freq: 2412.0")])
-        self.associate(radio)
-        self.assertEqual(len(radio.connections()), 1)
+    def test_control_failure_and_invalid_ssid_fail_closed(self):
+        for ssid in ("", "x"*33, "SmartLife\nADD_NETWORK"):
+            with self.assertRaises(association.AssociationError):
+                association.associate(ADAPTER, ssid, guard=lambda _: None)
+        control = FakeControl(reject=True)
+        with self.assertRaises(association.AssociationError):
+            self.associate(FakeRadio(), control=control)
+        self.assertIn("REMOVE_NETWORK 0", control.calls)
 
     def test_adapter_replacement_stops_before_any_mutation(self):
         radio = FakeRadio()
