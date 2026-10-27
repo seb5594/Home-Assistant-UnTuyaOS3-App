@@ -8,4 +8,6 @@ Integrated and USB Wi-Fi require AP and namespace support. The dedicated interfa
 
 Upload additional UG images in the web interface. **Download logs** exports diagnostics. If startup fails, read both apps' **Log** tabs. No terminal commands are required.
 
+Wi-Fi association is verified before DHCP starts. The console logs up to three attempts with the selected AP's BSSID, frequency and signal, plus driver and link diagnostics. If the AP disappears, restore the device's AP pairing mode and start a new session. Repeated association timeouts may require a different compatible adapter; select its interface name in both apps' Configuration tabs.
+
 Stop this app after use. The helper restores the radio and exits. See the English repository README for full instructions and permissions.

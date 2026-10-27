@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.1-beta.4
+
+- Verify the live BSSID, SSID and frequency before DHCP; an exit-zero `iw connect -w` timeout no longer counts as a connection.
+- Retry association up to three times against the selected open SSID, using explicit BSSID/frequency and target-channel rescans.
+- Log signal strength, kernel, driver, connect events, link checks and read-only power-saving/regulatory diagnostics.
+- Stop with an association-specific error if the device AP disappears or all attempts fail; no firmware upload is attempted.
+- Pass the approved PHY and interface index to connection checks and recheck adapter identity during retries.
+
 ## 0.1.1-beta.3
 
 - Fix interactive session startup through Home Assistant's streaming Ingress proxy by accepting chunked POST bodies.

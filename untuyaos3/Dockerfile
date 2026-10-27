@@ -15,7 +15,7 @@ COPY integration/patch_upstream.py /tmp/patch_upstream.py
 RUN python /tmp/patch_upstream.py /upstream
 
 FROM ${BUILD_FROM}
-ARG BUILD_VERSION=0.1.1-beta.3
+ARG BUILD_VERSION=0.1.1-beta.4
 ARG BUILD_ARCH=amd64
 RUN apt-get update && apt-get install -y --no-install-recommends bash iw iproute2 udhcpc tini \
     && rm -rf /var/lib/apt/lists/*

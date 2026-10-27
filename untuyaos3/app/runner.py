@@ -82,7 +82,8 @@ class Runner:
             fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 32, 120, 0, 0))
             env = {key: os.environ[key] for key in ("PATH", "LANG") if key in os.environ}
             env.update(PYTHONUNBUFFERED="1", TERM="dumb", LC_ALL="C.UTF-8",
-                       UNTUYAOS3_SKIP_INSTALL="1", UNTUYAOS3_ALLOWED_IFACE=self.adapter.name)
+                       UNTUYAOS3_SKIP_INSTALL="1", UNTUYAOS3_ALLOWED_IFACE=self.adapter.name,
+                       UNTUYAOS3_ALLOWED_PHY=self.adapter.phy, UNTUYAOS3_ALLOWED_IFINDEX=str(self.adapter.ifindex))
             args = ["bash", str(self.root / "UnTuyaOS3.sh"), "--verbose", "--interface", self.adapter.name]
             self.journal.emit("info", "Starting pinned UnTuyaOS3.sh with verbose TX/RX logging")
             with self.lock:

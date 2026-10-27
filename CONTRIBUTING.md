@@ -11,6 +11,8 @@ docker build -t untuyaos3-wifi:dev untuyaos3_wifi
 
 PTY and SCM_RIGHTS tests require Linux. Windows runs portable tests. Wireless commands are mocked: no automated test flashes hardware or disconnects a network.
 
+Association regression tests reproduce an exit-zero `iw` timeout, mismatched BSSID/SSID/frequency, transient recovery and AP disappearance. Each main-app image also runs the actual patched upstream connection script with stub commands and checks that a failed association verifier prevents DHCP from starting.
+
 The helper copies of wifi.py, protocol.py and journal.py must match the main app. This keeps both Home Assistant image build contexts self-contained; packaging tests enforce equality.
 
 Upstream patches match exact context and fail the image build on drift. Changing the pinned revision requires reviewing upstream shell commands and repeating the privilege review. Do not add a host-network fallback.

@@ -223,7 +223,10 @@ class IngressTests(unittest.TestCase):
             for name, value in headers:
                 connection.putheader(name, value)
             connection.endheaders(body)
-            connection.sock.shutdown(socket.SHUT_WR)
+            # An early 403 may close the peer before this test half-closes its
+            # request. Still read and assert the actual HTTP response below.
+            with contextlib.suppress(OSError):
+                connection.sock.shutdown(socket.SHUT_WR)
             response = connection.getresponse()
             return response.status, json.loads(response.read())
         finally:

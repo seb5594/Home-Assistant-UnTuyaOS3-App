@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1-beta.4
+
+- Keep the helper aligned with the app bundle's verified Wi-Fi association and diagnostic improvements.
+- Retain the existing scoped radio handover and restoration permissions.
+
 ## 0.1.1-beta.3
 
 - Keep the helper version aligned with the app bundle's Ingress compatibility fix.
