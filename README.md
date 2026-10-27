@@ -164,7 +164,7 @@ If my work helped you or turned out to be useful, show your appreciation with a 
 <!-- license:begin (generated from the license file) -->
 ## License
 
-[![license](https://img.shields.io/static/v1?label=license&message=Apache-2.0&color=5B6770&style=flat)](LICENSE)
+[![license](https://img.shields.io/static/v1?label=license&message=MIT&color=5B6770&style=flat)](LICENSE)
 
-Published under the [Apache License 2.0](LICENSE).
+Published under the [MIT License](LICENSE).
 <!-- license:end -->

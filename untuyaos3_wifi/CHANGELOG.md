@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1-beta.6
+
+- Relicense the project under the MIT License.
+
 ## 0.1.1-beta.5
 
 - Keep the helper aligned with the app bundle's fix for open APs being reported as invisible after a scan.

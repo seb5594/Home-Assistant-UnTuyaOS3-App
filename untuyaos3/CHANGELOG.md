@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1-beta.6
+
+- Relicense the project under the MIT License.
+
 ## 0.1.1-beta.5
 
 - Fix the selected open AP being reported as invisible: accept fractional frequencies (`2412.0`) printed by newer `iw` versions.
