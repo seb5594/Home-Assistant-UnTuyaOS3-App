@@ -33,4 +33,6 @@ CI validates software and profile syntax, not these hardware outcomes.
 
 ## Build pipeline
 
-The template's pinned shared engine expects exactly one app and cannot discover this two-app repository. Its caller is replaced by a repository-local CI workflow that validates and builds both apps without publishing. Funding, Dependabot, Renovate and the original license are retained. The shared engine repository is not modified.
+The template's pinned shared engine expects exactly one app and cannot discover this two-app repository. Its caller is replaced by a repository-local CI workflow that validates and builds both apps. Funding, Dependabot, Renovate and the original license are retained. The shared engine repository is not modified.
+
+Version tags in the form `vX.Y.Z` also publish an experimental GitHub prerelease after both native architecture jobs pass. The tag must match the version in both app configurations, and both must retain `stage: experimental`. The release attaches a source ZIP and its SHA-256 checksum; Home Assistant continues to build the apps locally. Branch pushes and manual validation runs do not publish releases.
