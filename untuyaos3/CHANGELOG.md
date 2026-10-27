@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1-beta.5
+
+- Fix the selected open AP being reported as invisible: accept fractional frequencies (`2412.0`) printed by newer `iw` versions.
+- Fall back to a directed scan when the kernel scan cache no longer holds the selected AP.
+
 ## 0.1.1-beta.4
 
 - Verify the live BSSID, SSID and frequency before DHCP; an exit-zero `iw connect -w` timeout no longer counts as a connection.
