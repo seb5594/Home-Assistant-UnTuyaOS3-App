@@ -18,6 +18,35 @@ import inventory
 import supplicant
 from journal import Journal
 from wifi import Adapter
+from wifi import radio_unblocked, PreflightError
+
+
+class RfkillTests(unittest.TestCase):
+    def test_stale_unrelated_entry_does_not_hide_valid_radio(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "rfkill3").mkdir()  # name missing after another PHY moved namespaces
+            selected = root / "rfkill4"
+            selected.mkdir()
+            for key, value in {"name": "phy0", "soft": "0", "hard": "0"}.items():
+                (selected / key).write_text(value)
+            radio_unblocked("phy0", root)
+            for key in ("soft", "hard"):
+                for value in ("1", "", "unknown"):
+                    (selected / key).write_text(value)
+                    with self.assertRaises(PreflightError):
+                        radio_unblocked("phy0", root)
+                (selected / key).write_text("0")
+            (selected / "hard").unlink()
+            with self.assertRaisesRegex(PreflightError, "became unavailable"):
+                radio_unblocked("phy0", root)
+
+    def test_missing_selected_radio_still_fails_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "rfkill3").mkdir()
+            with self.assertRaisesRegex(PreflightError, "cannot verify"):
+                radio_unblocked("phy0", root)
 
 
 class LogTests(unittest.TestCase):
@@ -112,6 +141,46 @@ class DeviceTests(unittest.TestCase):
 
 @unittest.skipUnless(sys.platform == "linux", "Linux sysfs-style symlinks and Unix sockets")
 class UsbTests(unittest.TestCase):
+    def test_assigned_usb_radio_is_not_reported_as_missing_driver(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            device = root / "2-2.2"
+            device.mkdir()
+            for key, value in {"idVendor": "0cf3", "idProduct": "9271", "product": "UB91"}.items():
+                (device / key).write_text(value)
+            lease = {"name": "wlp4s0f3u2u2", "bus": "USB", "usb_path": "2-2.2"}
+            row = inventory.usb_devices(root, leased=lease)[0]
+            self.assertEqual(row["assigned_interface"], lease["name"])
+            self.assertIn("Assigned", row["hint"])
+            self.assertNotIn("requires", row["hint"])
+            row = inventory.usb_devices(root, leased={**lease, "usb_path": "2-3"})[0]
+            self.assertIsNone(row["assigned_interface"])
+            self.assertIn("requires", row["hint"])
+
+    def test_additional_driver_families_detected_without_interface_name_assumptions(self):
+        for name in ("rt2800usb", "mt7921u", "mwifiex_usb", "ath6kl_usb", "brcmfmac", "rtw_8822bu"):
+            with self.subTest(driver=name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                device = root / "1-1"
+                device.mkdir()
+                (device / "idVendor").write_text("1234")
+                (device / "idProduct").write_text("5678")
+                child = root / "1-1:1.0"
+                child.mkdir()
+                driver = root / name
+                driver.mkdir()
+                (child / "driver").symlink_to(driver, target_is_directory=True)
+                self.assertEqual(inventory.usb_devices(root)[0]["drivers"], [name])
+
+    def test_host_module_inventory_reports_observed_modules_only(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in ("ath9k_htc", "rtw88_8822ce", "mt7921u", "unrelated"):
+                (root / name).mkdir()
+            info = inventory.host_drivers(root)
+            self.assertEqual(info["loaded_wifi_modules"], ["ath9k_htc", "mt7921u", "rtw88_8822ce"])
+            self.assertTrue(info["kernel"])
+
     def test_ar9271_usb_enumeration_distinguished_from_bound_wifi(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

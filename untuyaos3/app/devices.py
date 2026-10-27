@@ -15,6 +15,7 @@ class Devices:
         self.lease = None
         self.selected = None
         self.adapters, self.usb_devices = [], []
+        self.host = {}
         self.error = ""
         self.runner.state = "select_adapter"
         self.preferred = None
@@ -25,7 +26,7 @@ class Devices:
 
     def status(self):
         return {"selected_adapter": self.selected, "adapters": self.adapters, "usb_devices": self.usb_devices,
-                "adapter_error": self.error, "selection_locked": self.lease is not None,
+                "adapter_error": self.error, "host": self.host, "selection_locked": self.lease is not None,
                 "adapter_busy": self.operation.locked()}
 
     def refresh(self):
@@ -34,6 +35,7 @@ class Devices:
         try:
             result = inventory(self.options)
             self.adapters, self.usb_devices = result["adapters"], result["usb_devices"]
+            self.host = result.get("host", {})
             self.error = ""
             if not self.lease:
                 eligible = [entry["name"] for entry in self.adapters if entry.get("eligible")]

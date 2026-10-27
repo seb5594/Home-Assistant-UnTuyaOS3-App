@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.0-beta.1
+
+- Preserve the user-confirmed AR9271 flashing path and isolated two-app design.
+- Ignore stale rfkill entries from unrelated radios while still requiring readable, unblocked state for the selected radio.
+- Label leased USB interfaces as assigned instead of incorrectly suggesting missing firmware.
+- Expand USB diagnostic driver recognition and expose the running host kernel and loaded Wi-Fi modules.
+- Document the confirmed LSC Smart Floor Lamp / T1 flash, upstream scope and HAOS driver evidence.
+- Keep the release experimental; additional driver families are not claimed as hardware-validated.
+
 ## 0.2.0-beta.2
 
 - Fix all adapters being disabled when iw omits set_wiphy_netns from its human-readable capabilities.

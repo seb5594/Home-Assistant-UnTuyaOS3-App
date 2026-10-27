@@ -30,7 +30,7 @@ function controls(state, data = {}) {
   $("adapter-select").disabled = Boolean(data.selection_locked || data.adapter_busy) || state === "offline";
 }
 function showAdapters(data) {
-  const key = JSON.stringify([data.adapters, data.usb_devices, data.selected_adapter, data.selection_locked, data.adapter_error]);
+  const key = JSON.stringify([data.adapters, data.usb_devices, data.host, data.selected_adapter, data.selection_locked, data.adapter_error]);
   if (key === adapterView) return;
   adapterView = key;
   const select = $("adapter-select");
@@ -55,7 +55,7 @@ function showAdapters(data) {
   for (const entry of data.usb_devices || []) {
     const row = document.createElement("li");
     row.textContent = entry.product + " (" + entry.id + ", port " + entry.path + ") · driver: " + (entry.drivers.join(", ") || "not bound")
-      + " · Wi-Fi interface: " + (entry.interfaces.join(", ") || "not present on host") + (entry.hint ? " — " + entry.hint : "");
+      + " · Wi-Fi interface: " + (entry.assigned_interface ? entry.assigned_interface + " (assigned to this app)" : entry.interfaces.join(", ") || "not present on host") + (entry.hint ? " — " + entry.hint : "");
     $("usb-devices").append(row);
   }
   if (!(data.usb_devices || []).length) {
@@ -63,6 +63,10 @@ function showAdapters(data) {
     row.textContent = "No USB Wi-Fi device found by the helper. Plug it in and refresh adapters.";
     $("usb-devices").append(row);
   }
+  const host = data.host || {};
+  $("host-drivers").textContent = host.kernel ? "Host kernel: " + host.kernel + " · Loaded Wi-Fi modules: "
+    + ((host.loaded_wifi_modules || []).join(", ") || "none reported")
+    + ". Loaded modules do not guarantee AP mode or successful flashing." : "Host driver information unavailable; refresh adapters.";
 }
 async function poll() {
   if (polling) return;

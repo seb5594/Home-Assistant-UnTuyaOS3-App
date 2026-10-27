@@ -11,13 +11,14 @@
   <a href="https://paypal.me/seb5594"><img src="https://img.shields.io/static/v1?label=Support&amp;message=PayPal&amp;color=0070BA&amp;logo=paypal&amp;logoColor=white&amp;style=for-the-badge" alt="PayPal" height="40"></a>
   <a href="https://buymeacoffee.com/seb5594"><img src="https://img.shields.io/static/v1?label=Support&amp;message=Buy%20Me%20a%20Coffee&amp;color=FFDD00&amp;logo=buy-me-a-coffee&amp;logoColor=black&amp;style=for-the-badge" alt="Buy Me a Coffee" height="40"></a><br>
   <a href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fseb5594%2FHome-Assistant-Apps"><img src="https://img.shields.io/static/v1?label=Home%20Assistant&amp;message=Add%20app%20repository&amp;color=18BCF2&amp;logo=homeassistant&amp;logoColor=white&amp;style=for-the-badge" alt="Home Assistant" height="28"></a>
-  <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/releases/tag/v0.2.0-beta.2"><img src="https://img.shields.io/static/v1?label=version&amp;message=Beta%202&amp;color=1877A5&amp;style=for-the-badge" alt="version" height="28"></a>
+  <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/releases"><img src="https://img.shields.io/static/v1?label=version&amp;message=Beta%201&amp;color=1877A5&amp;style=for-the-badge" alt="version" height="28"></a>
   <img src="https://img.shields.io/static/v1?label=image%20pulls&amp;message=41&amp;color=1877A5&amp;style=for-the-badge" alt="image pulls" height="28"><br>
   <img src="https://img.shields.io/static/v1?label=arch%20%26%20size&amp;message=amd64%20151.2%20%C2%B7%20aarch64%20165.6%20MiB&amp;color=157F71&amp;style=flat" alt="arch &amp; size" height="20">
   <img src="https://img.shields.io/static/v1?label=stage&amp;message=experimental&amp;color=2F855A&amp;style=flat" alt="stage" height="20">
   <img src="https://img.shields.io/static/v1?label=ingress&amp;message=enabled&amp;color=7C3AED&amp;style=flat" alt="ingress" height="20">
   <img src="https://img.shields.io/static/v1?label=mounts%20%28read-write%29&amp;message=share&amp;color=B45309&amp;style=flat" alt="mounts (read-write)" height="20">
   <img src="https://img.shields.io/static/v1?label=privileged&amp;message=NET_ADMIN%2C%20NET_RAW&amp;color=B45309&amp;style=flat" alt="privileged" height="20"><br>
+  <a href="https://github.com/seb5594/Home-Assistant-Apps/stargazers"><img src="https://img.shields.io/github/stars/seb5594/Home-Assistant-UnTuyaOS3-App?label=stars&amp;style=flat" alt="stars" height="20"></a>
   <a href="https://github.com/seb5594/Home-Assistant-Apps/issues"><img src="https://img.shields.io/github/issues/seb5594/Home-Assistant-UnTuyaOS3-App?label=issues&amp;style=flat" alt="issues" height="20"></a>
   <img src="https://img.shields.io/static/v1?label=runtime%20tests&amp;message=4%20passed&amp;color=2F855A&amp;style=flat" alt="runtime tests" height="20">
   <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/seb5594/Home-Assistant-UnTuyaOS3-App/ci.yml?branch=dev&amp;label=checks&amp;style=flat" alt="checks" height="20"></a>
@@ -28,6 +29,20 @@
 An interactive Home Assistant app for [UnTuyaOS3](https://github.com/tuya-cloudcutter/UnTuyaOS3), with an Ingress console, verbose live logs, firmware uploads and a dedicated Wi-Fi radio.
 
 **Experimental.** Supports amd64 and aarch64 Home Assistant OS hosts. Integrated and USB Wi-Fi require a working host driver, AP mode and network-namespace reassignment. Hardware/Supervisor validation is still required.
+
+## Confirmed user result
+
+On 27 October 2026, seb5594 successfully flashed an **LSC Smart Floor Lamp (Action, Tuya T1)** using this app's **0.2.0-beta.2** release on bare-metal Home Assistant OS, kernel **6.18.52-haos**. The adapter was an **Atheros AR9271 / UB91**, USB ID **0cf3:9271**, using **ath9k_htc**. The selected image was the bundled T1 ESPHome Kickstart UG image. The supplied log shows association, a DHCP lease, completed OTA transfer and exit status 0; the user confirmed that flashing worked.
+
+This is one confirmed device/adapter combination, not a guarantee for every lamp revision. The adapter is AR9271 according to its USB identification (sometimes mistyped as AR7271). No private device keys or full protocol logs are published here.
+
+## What the upstream project supports
+
+[UnTuyaOS3](https://github.com/tuya-cloudcutter/UnTuyaOS3) installs custom firmware on **some TuyaOS 3 devices**. A product name or Tuya branding alone does not establish compatibility; firmware versions and community reports matter. Its selectable platforms are **T1, BK7231N and RTL8720CF**, with platform-specific **UG images**. It bundles [ESPHome Kickstart](https://github.com/libretiny-eu/esphome-kickstart/releases) firmware and uses the device's AP pairing mode, usually indicated by a slow blink.
+
+The upstream sequence selects a platform and firmware, joins the device AP, sends the AP/LAN protocol commands and uploads firmware. This app preserves that sequence and the numbered menus, adds Home Assistant Ingress, and prepares dependencies at image-build time. Verbose mode exposes the per-frame TX/RX output. Firmware signatures validate format, not suitability for a particular device. An interrupted or incompatible flash can require serial recovery.
+
+Consult the upstream [FAQ](https://github.com/tuya-cloudcutter/UnTuyaOS3/wiki/FAQ) and [Device Compatibility wiki](https://github.com/tuya-cloudcutter/UnTuyaOS3/wiki/Device-Compatibility) before flashing. These are community resources, not an exhaustive supported-device list. This summary follows the [pinned upstream README](https://github.com/tuya-cloudcutter/UnTuyaOS3/blob/2111458225c269ddddf5353bf09a1e8f1096d959/README.md); the original exploit is credited there to [kuba2k2](https://github.com/kuba2k2) of [LibreTiny](https://github.com/libretiny-eu/libretiny).
 
 ## Install using Home Assistant
 
@@ -109,6 +124,10 @@ After a normal stop, the main app disconnects and resets only the leased interfa
 
 ## Permission boundaries
 
+The two apps deliberately remain separate. A single host-network app would give its Web UI and upstream flashing code access to the host network alongside the helper code. Separate processes in that same container do not reproduce the current network-namespace boundary automatically.
+
+A nested container is not a supported subordinate-app arrangement in the Supervisor configuration. Managing one through the host Docker socket would grant broad host control; running a nested daemon or creating namespaces internally would introduce additional privileges and lifecycle complexity. We retain the working two-app design and its existing capabilities. See the [Home Assistant app configuration reference](https://contributors.home-assistant.io/apps/reference/configuration/) for the host-network and privilege settings.
+
 | Access | Main app | Wi-Fi Helper |
 | --- | --- | --- |
 | Network namespace | Isolated | Host; required for radio assignment |
@@ -133,6 +152,8 @@ The main app accepts numeric menu choices only. Ingress requires the actual Supe
 Network namespaces isolate networking, not the whole kernel. Physical-radio behavior is not a VM-level boundary.
 
 ## Upstream and development
+
+See [Wi-Fi compatibility and HAOS driver evidence](docs/wifi-compatibility.md) for tested hardware, configured driver families, live module diagnostics and the internal-adapter failure analysis.
 
 Upstream is pinned to [2111458225c269ddddf5353bf09a1e8f1096d959](https://github.com/tuya-cloudcutter/UnTuyaOS3/commit/2111458225c269ddddf5353bf09a1e8f1096d959). Both apps use the pinned official `ghcr.io/home-assistant/base-python` image (Python 3.13 on Alpine 3.24). Packages are installed during image build, never at startup.
 

@@ -94,14 +94,26 @@ def nm_unmanaged(name):
                              "Reserve a dedicated adapter as unmanaged on the host first.")
 
 
-def radio_unblocked(phy):
-    entries = [p for p in Path("/sys/class/rfkill").glob("rfkill*")
-               if (p / "name").read_text().strip() == phy]
+def radio_unblocked(phy, root=Path("/sys/class/rfkill")):
+    entries = []
+    for entry in root.glob("rfkill*"):
+        try:
+            name = (entry / "name").read_text().strip()
+        except FileNotFoundError:
+            # A different radio can leave a stale class entry after moving
+            # namespaces or unplugging. It says nothing about this radio.
+            continue
+        if name == phy:
+            entries.append(entry)
     if not entries:
         raise PreflightError(f"{phy}: cannot verify rfkill state; refusing to change radio state")
     for entry in entries:
-        if any((entry / key).read_text().strip() != "0" for key in ("soft", "hard")):
-            raise PreflightError(f"{phy}: radio is soft/hard blocked; unblock only the dedicated radio on the host")
+        try:
+            states = [(entry / key).read_text().strip() for key in ("soft", "hard")]
+        except OSError as exc:
+            raise PreflightError(f"{phy}: selected radio's rfkill state became unavailable; refresh adapters") from exc
+        if states != ["0", "0"]:
+            raise PreflightError(f"{phy}: radio is soft/hard blocked or state unknown; check this adapter in Home Assistant")
 
 
 @dataclass
