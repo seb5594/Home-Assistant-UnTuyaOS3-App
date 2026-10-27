@@ -104,6 +104,43 @@ class DiscoveryTests(unittest.TestCase):
 
 
 class LeaseTests(unittest.TestCase):
+    def test_host_validation_accepts_phy_info_without_namespace_command_text(self):
+        for name in ("wlp2s0", "wlp4s0f3u2u2"):
+            def radio(*args):
+                if args == ("iw", "dev"):
+                    return IW.replace("wlan1", name)
+                if args[:2] == ("iw", "phy"):
+                    return INFO + "\tSupported commands:\n\t\t * new_interface\n\t\t * connect\n"
+                if args[-2:] == ("get", "power_save"):
+                    return "Power save: on"
+                if args[0] == "ip" and args[2] in ("address", "link"):
+                    return json.dumps([{"ifindex": 4, "address": "dc:e9:94:8c:9a:1b", "flags": ["UP"], "addr_info": []}])
+                if args[0] == "ip":
+                    return "[]"
+                return "Not connected."
+            def inspect(candidate, interfaces, **kwargs):
+                return wifi.inspect(candidate, interfaces, run=radio, **kwargs)
+            with self.subTest(name=name), patch.object(broker, "command", side_effect=radio), \
+                 patch.object(broker, "inspect", side_effect=inspect), patch.object(broker, "nm_properties", return_value=True), \
+                 patch.object(broker, "radio_unblocked"), patch.object(broker, "nm_set") as mutate:
+                adapter, snapshot = broker.validate_host(name, lambda *_: None)
+                self.assertEqual(adapter.name, name)
+                self.assertEqual(snapshot["power_save"], "on")
+                mutate.assert_not_called()
+
+    def test_kernel_rejected_namespace_move_still_restores_and_fails(self):
+        from types import SimpleNamespace
+        adapter = wifi.Adapter("wlan1", "phy0", 4)
+        snapshot = {"managed": True, "name": "wlan1", "phy": "phy0"}
+        with tempfile.TemporaryDirectory() as temp, patch.object(broker, "DATA", Path(temp)), \
+             patch.object(broker, "check_target"), patch.object(broker, "validate_host", return_value=(adapter, snapshot)), \
+             patch.object(broker, "nm_set"), patch.object(broker, "command", return_value=IW), \
+             patch.object(broker, "inspect"), patch.object(broker.subprocess, "run", return_value=SimpleNamespace(returncode=1, stderr="Operation not supported")), \
+             patch.object(broker, "restore") as restore:
+            with self.assertRaisesRegex(wifi.PreflightError, "Namespace handover failed.*Operation not supported"):
+                broker.handover(8, "wlan1", lambda *_: None)
+            restore.assert_called_once_with(snapshot, unittest.mock.ANY, wait=2)
+
     def test_only_requested_interface_and_safe_subnet(self):
         env = {"interface": "wlan1", "UNTUYAOS3_ALLOWED_IFACE": "wlan1", "ip": "192.168.176.2", "subnet": "255.255.255.0"}
         self.assertEqual(dhcp.validate_lease(env, [{"dst": "default", "dev": "eth0"}]), "192.168.176.2/24")

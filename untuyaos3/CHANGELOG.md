@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0-beta.2
+
+- Fix all adapters being disabled when iw omits set_wiphy_netns from its human-readable capabilities.
+- Verify namespace support through the actual authenticated radio handover; retain idle/AP checks and restoration on kernel rejection.
+- Add regression coverage for integrated Realtek and USB Atheros interface discovery without that text.
+
 ## 0.2.0-beta.1
 
 - Select Wi-Fi in the main Web UI; automatically select the only eligible adapter and explain rejected/USB-only devices.

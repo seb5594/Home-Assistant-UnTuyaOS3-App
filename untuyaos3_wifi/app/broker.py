@@ -60,8 +60,9 @@ def validate_host(name, log):
         raise PreflightError(f"Selected Wi-Fi {name!r} not found; refresh adapters in the main Web UI")
     managed = nm_properties(name, log)
     adapter = inspect(selected, interfaces, rfkill=radio_unblocked, allow_up=True)
-    if "set_wiphy_netns" not in command("iw", "phy", adapter.phy, "info"):
-        raise PreflightError(f"{name}/{adapter.phy}: driver does not advertise set_wiphy_netns; isolation unavailable")
+    # iw's human-readable supported-command list is not a reliable namespace
+    # capability API. Only the guarded handover's kernel result proves support.
+    log("info", f"{name}/{adapter.phy}: namespace support will be verified during authenticated handover")
     link = json.loads(command("ip", "-j", "link", "show", "dev", name))[0]
     log("info", f"Host checks passed for {name}: idle, no addresses/routes, sole interface on AP-capable {adapter.phy}")
     power_save = None
