@@ -11,8 +11,8 @@
   <a href="https://paypal.me/seb5594"><img src="https://img.shields.io/static/v1?label=Support&amp;message=PayPal&amp;color=0070BA&amp;logo=paypal&amp;logoColor=white&amp;style=for-the-badge" alt="PayPal" height="40"></a>
   <a href="https://buymeacoffee.com/seb5594"><img src="https://img.shields.io/static/v1?label=Support&amp;message=Buy%20Me%20a%20Coffee&amp;color=FFDD00&amp;logo=buy-me-a-coffee&amp;logoColor=black&amp;style=for-the-badge" alt="Buy Me a Coffee" height="40"></a><br>
   <a href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fseb5594%2FHome-Assistant-Apps"><img src="https://img.shields.io/static/v1?label=Home%20Assistant&amp;message=Add%20app%20repository&amp;color=18BCF2&amp;logo=homeassistant&amp;logoColor=white&amp;style=for-the-badge" alt="Home Assistant" height="28"></a>
-  <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/releases/tag/v0.1.1-beta.5"><img src="https://img.shields.io/static/v1?label=version&amp;message=Beta%205&amp;color=1877A5&amp;style=for-the-badge" alt="version" height="28"></a>
-  <img src="https://img.shields.io/static/v1?label=image%20pulls&amp;message=28&amp;color=1877A5&amp;style=for-the-badge" alt="image pulls" height="28"><br>
+  <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/releases/tag/v0.1.1-beta.6"><img src="https://img.shields.io/static/v1?label=version&amp;message=Beta%206&amp;color=1877A5&amp;style=for-the-badge" alt="version" height="28"></a>
+  <img src="https://img.shields.io/static/v1?label=image%20pulls&amp;message=32&amp;color=1877A5&amp;style=for-the-badge" alt="image pulls" height="28"><br>
   <img src="https://img.shields.io/static/v1?label=arch%20%26%20size&amp;message=amd64%20145.7%20%C2%B7%20aarch64%20172.3%20MiB&amp;color=157F71&amp;style=flat" alt="arch &amp; size" height="20">
   <img src="https://img.shields.io/static/v1?label=stage&amp;message=experimental&amp;color=2F855A&amp;style=flat" alt="stage" height="20">
   <img src="https://img.shields.io/static/v1?label=ingress&amp;message=enabled&amp;color=7C3AED&amp;style=flat" alt="ingress" height="20">
