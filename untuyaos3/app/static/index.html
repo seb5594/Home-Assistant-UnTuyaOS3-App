@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="csrf" content="__CSRF__">
+<title>UnTuyaOS3</title><link rel="stylesheet" href="style.css"><script src="app.js" defer></script>
+</head>
+<body>
+<header><div><span class="eyebrow">HOME ASSISTANT · DEVICE TOOLS</span><h1>UnTuyaOS3<span class="version">0.1</span></h1>
+<p>Give compatible Tuya devices a new beginning.</p></div><span id="state" class="badge">Connecting…</span></header>
+<main>
+<section class="toolbar card"><div><h2>Dedicated Wi-Fi</h2><p id="adapter">Checking adapter…</p></div>
+<div class="actions"><button id="start" disabled>Start interactive session</button><button id="cancel" class="danger" disabled>Stop session</button>
+<a class="button secondary" href="api/logs" download="untuyaos3-logs.zip">Download logs</a></div></section>
+<div id="notice" class="notice" role="status">Reading live status…</div>
+<div class="workspace">
+<section class="card terminal-card"><div class="section-heading"><div><span class="eyebrow">INTERACTIVE SESSION</span><h2>UnTuyaOS3 console</h2></div><span class="live">● LIVE</span></div>
+<pre id="terminal" tabindex="0" aria-label="UnTuyaOS3 console output"></pre>
+<form id="choice-form"><label for="choice">Menu choice</label><input id="choice" inputmode="numeric" pattern="[0-9]{1,5}" maxlength="5" placeholder="e.g. 1" autocomplete="off" required disabled>
+<button id="send" disabled>Submit choice ↵</button></form>
+<p class="hint">Answer the numbered prompts above. Your session continues when you close this page.</p></section>
+<section class="card log-card"><div class="section-heading"><div><span class="eyebrow">ALWAYS VISIBLE</span><h2>Activity & diagnostics</h2></div>
+<label class="follow"><input id="follow" type="checkbox" checked> Follow</label></div>
+<pre id="logs" tabindex="0" aria-label="Live diagnostic log"></pre><p class="hint">Adapter checks, protocol output, heartbeat, exit status and cleanup. Logs are saved automatically.</p></section>
+</div>
+<section class="card firmware-card"><div><span class="eyebrow">FIRMWARE LIBRARY</span><h2>Bring your own UG image</h2>
+<p>Bundled firmware is already available in the script's menu. Additional images stay in this app's private storage.</p></div>
+<form id="firmware-form"><label>Platform<select id="platform"><option>T1</option><option>BK7231N</option><option>RTL8720CF</option></select></label>
+<label>UG firmware (.bin)<input id="firmware" type="file" accept=".bin" required></label><button id="upload" class="secondary">Upload firmware</button></form>
+<p id="library" class="hint"></p></section>
+<p class="caution">Flashing replaces device firmware and may make a device unusable. Use a compatible device and the correct UG image. Put the device into AP pairing mode before starting. Keep power connected during flashing.</p>
+</main><footer>Isolated radio · Home Assistant Ingress · Full verbose output</footer>
+</body></html>

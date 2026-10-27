@@ -1,0 +1,26 @@
+#include <tunables/global>
+profile untuyaos3_wifi flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+  network,
+  unix,
+  dbus,
+  signal (send, receive),
+  capability net_admin,
+  / r,
+  /{bin,sbin,lib,lib32,lib64}/** rixm,
+  /usr/{,**} rixm,
+  /opt/{,**} rixm,
+  /etc/{,**} r,
+  /proc/{,**} r,
+  /sys/{,**} r,
+  /data/{,**} rwk,
+  /tmp/{,**} rwk,
+  /run/{,**} rwk,
+  /dev/ptmx rw,
+  /dev/pts/{,**} rw,
+  /dev/tty rw,
+  # The Supervisor mounts /share, but only this IPC directory is allowed.
+  /share/ r,
+  /share/untuyaos3-private/{,**} rwk,
+
+}

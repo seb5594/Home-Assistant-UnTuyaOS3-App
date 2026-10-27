@@ -1,0 +1,16 @@
+{
+  "configuration": {
+    "interface": {
+      "name": "Dedizierte WLAN-Schnittstelle",
+      "description": "Exakter Linux-Name, z. B. wlan0, wlan1 oder wlx. In beiden Apps gleich eintragen. Integriertes WLAN und USB-WLAN werden unterstützt. Niemals die aktive Netzwerkschnittstelle von Home Assistant wählen."
+    },
+    "pairing_token": {
+      "name": "Kopplungsgeheimnis",
+      "description": "In beiden Apps dasselbe private Geheimnis mit mindestens 32 Zeichen eintragen."
+    },
+    "run_timeout": {
+      "name": "Sitzungszeitlimit (Sekunden)",
+      "description": "Maximale Gesamtdauer einschließlich Menüeingaben und Gerätesuche. Standard: 30 Minuten."
+    }
+  }
+}

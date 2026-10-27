@@ -1,4 +1,6 @@
-.engine/
 __pycache__/
 *.py[cod]
+.venv/
+.build/
+.engine/
 **/data/options.json
