@@ -40,11 +40,17 @@ An interactive Home Assistant app for [UnTuyaOS3](https://github.com/tuya-cloudc
 
 See the [table lamp incident analysis](docs/table-lamp-3225458.md): the full image was transmitted without final OTA confirmation, and the user subsequently detected Kickstart Wi-Fi. A dark lamp may still be running setup firmware; inspect its state before retrying.
 
-## Confirmed user result
+## Tested devices and reported results
 
-On 27 October 2026, seb5594 successfully flashed an **LSC Smart Floor Lamp (Action, Tuya T1)** using this app's **0.2.0-beta.2** release on bare-metal Home Assistant OS, kernel **6.18.52-haos**. The adapter was an **Atheros AR9271 / UB91**, USB ID **0cf3:9271**, using **ath9k_htc**. The selected image was the bundled T1 ESPHome Kickstart UG image. The supplied log shows association, a DHCP lease, completed OTA transfer and exit status 0; the user confirmed that flashing worked.
+These are reports from seb5594's own devices, not a guarantee for every unit, hardware revision or firmware version. **Exploit acceptance, completed OTA transfer, firmware boot and working device outputs are separate milestones.** The evidence below distinguishes them.
 
-This is one confirmed device/adapter combination, not a guarantee for every lamp revision. The adapter is AR9271 according to its USB identification (sometimes mistyped as AR7271). No private device keys or full protocol logs are published here.
+| Device | Action article | Original firmware | Result and evidence |
+| --- | --- | --- | --- |
+| **LSC Smart Floor Lamp** (Tuya T1) | Not provided | `1.2.1` | **Successful flash confirmed by the user.** The log contains the device's OTA-finish response. Bundled T1 ESPHome Kickstart image; app `0.2.0-beta.2`, Atheros AR9271 / UB91 (`ath9k_htc`), bare-metal HAOS kernel `6.18.52-haos`. Reported 27 October 2026. |
+| **LSC Smart Connect decorative table lamp** | **3225458** | `1.0.43` | **Kickstart boot reported by the user.** All 432,292 image bytes were sent, but final OTA confirmation was absent. A Kickstart Wi-Fi network was subsequently found. Normal lamp outputs and the device-specific configuration remain unverified. See the [incident analysis](docs/table-lamp-3225458.md). Reported 28 October 2026. |
+| **LSC Smart LED Strip Kit** (packaging); **Eurodomest Smart LED Strip Kit** (SmartLife name) | **3225770** | `1.0.28` | **Successful jailbreak reported by the user.** The supplied excerpt shows a valid device-info response (`0x16`) and transmission of the schema command (`0x17`). It does not include the schema acknowledgement, OTA-finish response, flashed image or a boot check, so those stages are not independently documented here. Reported 28 October 2026. |
+
+The AR9271 adapter is identified by USB ID `0cf3:9271` (sometimes mistyped as AR7271). **Kickstart is a setup firmware and does not automatically configure lamp or strip outputs.** Private device identifiers, UUIDs, local/security keys and full protocol payloads are deliberately excluded from this table.
 
 ## What the upstream project supports
 
