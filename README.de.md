@@ -50,6 +50,10 @@ Das sind meine eigenen Geräte, jeweils mit einer Firmware-Version. Details und 
 
 Ein Flash besteht aus mehreren Stufen, die jede für sich scheitern können: Exploit akzeptiert, Übertragung komplett, Gerät bestätigt, neue Firmware bootet, Ausgänge funktionieren. Die Liste hält sie auseinander. Kickstart ist nur eine allgemeine Setup-Firmware und kennt die Pins deiner Lampe erst, wenn du sie konfigurierst.
 
+## Fertige Firmware für Action-Geräte
+
+Das Flashen ist nur die halbe Miete: Danach braucht das Gerät eine Firmware, die seine Pins kennt. Für Geräte vom Discounter Action (Marken LSC Smart, Battletron und Eurodomest) habe ich eine [Sammlung vorgebauter ESPHome-Firmware](https://gitea.seb5594.xyz/seb5594/Action_Battleton_Eurodomest_LSC-Smart-Custom-Firmware-Collection) zusammengestellt und auf meinem eigenen Gitea abgelegt. Lade dir dort das Image für dein Gerät herunter, lade es in der Firmware-Bibliothek der Web-Oberfläche als UG-Image hoch und flashe es. Gilt nur für Geräte von Action. Es gilt wie immer: Prüfe, ob Gerät und Firmware-Version passen, und rechne damit, das Gerät zu riskieren.
+
 ## Was du brauchst
 
 - Home Assistant OS (oder Supervised) auf **amd64 oder aarch64**.

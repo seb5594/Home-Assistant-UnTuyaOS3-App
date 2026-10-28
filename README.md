@@ -64,6 +64,10 @@ These are my own devices, each with one firmware version. Details and the Wi-Fi 
 
 A flash has several stages that can each go wrong: exploit accepted, transfer complete, device confirms, new firmware boots, outputs work. The list keeps them apart. Kickstart is only a generic setup firmware, it does not know your lamp's pins until you configure it.
 
+## Ready-made firmware for Action devices
+
+Flashing is only half the job: afterwards the device needs a firmware that knows its pins. For devices sold by the discounter Action (brands LSC Smart, Battletron and Eurodomest) I have built a [collection of prebuilt ESPHome firmware](https://gitea.seb5594.xyz/seb5594/Action_Battleton_Eurodomest_LSC-Smart-Custom-Firmware-Collection) and put it on my own Gitea. Download the image for your device there, upload it as a UG image in the Web UI's firmware library and flash it. It is only for devices from Action. Same warning as always: check that the device and firmware version match, and expect to risk the device.
+
 ## What you need
 
 - Home Assistant OS (or a Supervised install) on **amd64 or aarch64**.

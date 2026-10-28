@@ -29,6 +29,8 @@ The part I'm happiest with is probably the stuff around it that you only notice 
 
 **Please read this before you try it:** flashing can brick a device. A finished transfer does not guarantee that it boots, and I have no way to promise it works on your unit. Only use it on devices you can afford to lose. The exploit only affects some firmware versions, so the product name tells you very little.
 
+**Firmware for the Action devices:** flashing Kickstart is just the first step. For devices sold by the discounter Action (LSC Smart, Battletron, Eurodomest) I built a [collection of prebuilt ESPHome firmware](https://gitea.seb5594.xyz/seb5594/Action_Battleton_Eurodomest_LSC-Smart-Custom-Firmware-Collection) that you can download from my Gitea and flash with the app.
+
 **What I'd love your help with:** a compatibility list. I know three devices and one adapter; you know hundreds. There is a "Report a device" button in the app that opens a GitHub form with your adapter and versions already filled in. Failures help just as much as successes. If you try a Wi-Fi adapter other than the AR9271, I especially want to hear about it.
 
 **Credits:** all the clever work (exploit, protocol, scripts, firmware) belongs to the [tuya-cloudcutter](https://github.com/tuya-cloudcutter) community, and the original exploit comes from kuba2k2 and the [LibreTiny](https://github.com/libretiny-eu/libretiny) project. I only wrapped it for Home Assistant, so please give them a star. The app links to the original project in its web UI, and a workflow watches their repository for new releases.
@@ -63,6 +65,8 @@ Am meisten freut mich vermutlich das Drumherum, das man erst merkt, wenn etwas s
 - Eine Battletron-Lightbar von 2024 hat anders geantwortet, also hat die App dort angehalten. Auch das ist ein nützliches Ergebnis.
 
 **Bitte vor dem Ausprobieren lesen:** Flashen kann ein Gerät unbrauchbar machen. Ein abgeschlossener Transfer garantiert nicht, dass es danach bootet, und ich kann nicht versprechen, dass es bei deinem Gerät klappt. Nimm nur Geräte, die du notfalls verschmerzen kannst. Der Exploit betrifft nur manche Firmware-Versionen, der Produktname sagt also wenig.
+
+**Firmware für die Action-Geräte:** Kickstart ist nur der erste Schritt. Für Geräte vom Discounter Action (LSC Smart, Battletron, Eurodomest) habe ich eine [Sammlung vorgebauter ESPHome-Firmware](https://gitea.seb5594.xyz/seb5594/Action_Battleton_Eurodomest_LSC-Smart-Custom-Firmware-Collection) gebaut, die du von meinem Gitea laden und mit der App flashen kannst.
 
 **Wobei ich eure Hilfe gebrauchen kann:** eine Kompatibilitätsliste. Ich kenne drei Geräte und einen Adapter, ihr kennt Hunderte. In der App gibt es einen Button „Report a device“, der ein GitHub-Formular mit eurem Adapter und den Versionen vorausgefüllt öffnet. Fehlschläge helfen genauso wie Erfolge. Wenn ihr einen anderen WLAN-Adapter als den AR9271 ausprobiert, will ich das ganz besonders wissen.
 

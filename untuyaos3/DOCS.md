@@ -18,7 +18,7 @@ Choose a Wi-Fi adapter (a single eligible one is picked for you; press **Refresh
 
 - **Unconfirmed** means all bytes were sent but the device never confirmed. Look for a Kickstart Wi-Fi network before retrying: Kickstart is a generic setup firmware, so a dark lamp can be perfectly alive.
 - **Clear logs** wipes saved logs and both panels without stopping a session. **Download logs** exports them; each app starts with fresh logs, so download before restarting.
-- Your own UG images can be uploaded in the Web UI (32 MiB each, 30 per platform).
+- Your own UG images can be uploaded in the Web UI (32 MiB each, 30 per platform). For devices sold by Action (LSC Smart, Battletron, Eurodomest) there is a [collection of prebuilt ESPHome firmware](https://gitea.seb5594.xyz/seb5594/Action_Battleton_Eurodomest_LSC-Smart-Custom-Firmware-Collection).
 - Stop the app when you are done. The helper restores the adapter.
 
 Something not working? Read the Log tab of both apps, then the [troubleshooting list](https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App#when-something-does-not-work) in the README. Tell us how your device went with **Report a device** at the bottom of the Web UI.
