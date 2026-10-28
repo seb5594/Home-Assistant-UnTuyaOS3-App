@@ -25,6 +25,15 @@
 </p>
 <!-- header:end -->
 
+> [!DANGER]
+> **THIS EXPERIMENTAL TOOL CAN BRICK YOUR DEVICE. USE ENTIRELY AT YOUR OWN RISK.**
+>
+> **Flashing can leave a device unable to boot, permanently unusable, or recoverable only through physical/serial access.** A successful connection, accepted exploit, valid firmware signature or completed transfer does **not** guarantee that the device will boot or work afterward. An interrupted transfer, incompatible image, software defect, driver failure or device-firmware behavior can cause damage.
+>
+> **You are responsible for choosing to use this app/tool, verifying hardware and firmware compatibility, and accepting the risk of device loss and recovery costs. Do not use it on a device you cannot afford to lose.** There is no guarantee of a successful flash or recovery. The software is provided under the MIT License, without warranty, subject to applicable law.
+>
+> **A user has reported an LSC Smart Connect decorative table lamp (Action article 3225458) that stopped lighting after an OTA attempt. Its final OTA confirmation was not received; successful boot and recovery have not been established. Treat this model as unverified and this report as a serious failure report.**
+
 An interactive Home Assistant app for [UnTuyaOS3](https://github.com/tuya-cloudcutter/UnTuyaOS3), with an Ingress console, verbose live logs, firmware uploads and a dedicated Wi-Fi radio.
 
 **Experimental.** Supports amd64 and aarch64 Home Assistant OS hosts. Integrated and USB Wi-Fi require a working host driver, AP mode and network-namespace reassignment. Hardware/Supervisor validation is still required.
