@@ -13,6 +13,7 @@ RUNTIME = Path("/run")
 
 
 def validate_endpoint(address, target):
+    """Check lease and target are a private /24../30 subnet and distinct usable addresses."""
     lease = ipaddress.IPv4Interface(address)
     remote = ipaddress.IPv4Address(target)
     network = lease.network
@@ -26,6 +27,7 @@ def validate_endpoint(address, target):
 
 
 def state_path(environment):
+    """Path of this session's private target record; refuses anything but the session directory."""
     raw = environment.get("UNTUYAOS3_RUN_DIR", "")
     root = Path(raw)
     if not root.is_absolute() or root.parent != RUNTIME or not root.name.startswith("untuya-session-"):
@@ -39,6 +41,7 @@ def state_path(environment):
 
 
 def approved_adapter(environment):
+    """The adapter identity the Runner exported to the script."""
     name, phy = environment.get("UNTUYAOS3_ALLOWED_IFACE", ""), environment.get("UNTUYAOS3_ALLOWED_PHY", "")
     if not re.fullmatch(r"[A-Za-z0-9_.-]{1,15}", name) or not re.fullmatch(r"phy[0-9]+", phy):
         raise ValueError("Missing approved adapter")
@@ -46,6 +49,7 @@ def approved_adapter(environment):
 
 
 def store_target(environment, address, target):
+    """Persist the validated OTA target for this session only (mode 0600, no symlinks)."""
     validate_endpoint(address, target)
     path = state_path(environment)
     record = {"run_id": environment["UNTUYAOS3_RUN_ID"], "interface": environment["interface"],
@@ -62,6 +66,7 @@ def store_target(environment, address, target):
 
 
 def load_target(environment=None, run=command, guard=same_device):
+    """Return the validated OTA target, re-checking address, route and session identity right now."""
     environment = os.environ if environment is None else environment
     path = state_path(environment)
     info = path.lstat()
@@ -86,6 +91,7 @@ def load_target(environment=None, run=command, guard=same_device):
 
 
 def expect_frame_type(frame, expected):
+    """Stop with a readable message if the device answered with an unexpected protocol frame."""
     if frame.type != expected:
         raise RuntimeError(f"Device protocol response 0x{frame.type:02X}; expected 0x{expected:02X}. "
                            "Wi-Fi and DHCP completed, but this response does not establish UnTuyaOS3 compatibility. "

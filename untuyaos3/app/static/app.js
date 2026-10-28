@@ -2,7 +2,7 @@
 const $ = (id) => document.getElementById(id);
 const token = document.querySelector('meta[name="csrf"]').content;
 let cursor = 0, running = false, polling = false, lastState = "";
-let logGeneration = null, viewEpoch = 0, adapterView = "";
+let logGeneration = null, viewEpoch = 0, adapterView = "", helperView = "";
 const terminalLimit = 500000, logLimit = 750000;
 function append(element, text, limit) {
   element.textContent = (element.textContent + text).slice(-limit);
@@ -21,7 +21,7 @@ async function api(path, value = {}, headers = {}) {
 }
 function controls(state, data = {}) {
   running = state === "running";
-  $("state").textContent = state;
+  $("state").textContent = state.replace("_", " ");
   $("state").className = "badge " + state;
   $("start").disabled = !["ready", "finished", "unconfirmed", "cancelled", "failed"].includes(state) || Boolean(data.adapter_busy || data.recovery_pending) || !(data.selected_adapter || data.adapter);
   for (const id of ["choice", "send", "cancel"]) $(id).disabled = !running;
@@ -68,6 +68,48 @@ function showAdapters(data) {
     + ((host.loaded_wifi_modules || []).join(", ") || "none reported")
     + ". Loaded modules do not guarantee AP mode or successful flashing." : "Host driver information unavailable; refresh adapters.";
 }
+// Title, pill text and pill style per helper state (see HELPER_MESSAGES in devices.py).
+const HELPER_STATES = {
+  unknown: ["Looking for the helper…", "checking", ""],
+  ready: ["Wi-Fi Helper connected", "connected", "ready"],
+  outdated: ["Helper update needed", "update needed", "unconfirmed"],
+  unreachable: ["Helper not running", "not running", "failed"],
+  not_configured: ["Pairing secret missing", "setup needed", "failed"],
+  pairing: ["Pairing secret mismatch", "mismatch", "failed"],
+  protocol: ["Helper version mismatch", "mismatch", "failed"],
+  error: ["Helper problem", "error", "failed"]
+};
+function showHelper(helper = {}) {
+  const key = JSON.stringify(helper);
+  if (key === helperView) return;
+  helperView = key;
+  const state = HELPER_STATES[helper.state] ? helper.state : "unknown";
+  const [title, pill, style] = HELPER_STATES[state];
+  $("helper-title").textContent = title + (state === "ready" && helper.version ? " · v" + helper.version : "");
+  $("helper-pill").textContent = pill;
+  $("helper-pill").className = "badge " + style;
+  $("helper-message").textContent = helper.message || "";
+  // A working helper needs no explanation; keep the card to one line.
+  $("helper-body").hidden = state === "ready";
+  $("helper-steps").hidden = !["unknown", "unreachable", "not_configured"].includes(state);
+}
+// 24 random bytes as hex: 48 characters, comfortably above the 32 the apps require.
+function generateSecret() {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+// Prefill the GitHub issue form with what the app already knows about the adapter.
+function updateReportLink(data) {
+  const name = data.selected_adapter || (data.adapter && data.adapter.name);
+  const entry = (data.adapters || []).find((adapter) => adapter.name === name);
+  if (!entry) return;
+  const usb = (data.usb_devices || []).find((device) => device.assigned_interface === name || device.interfaces.includes(name));
+  const adapter = [usb ? usb.product + " (" + usb.id + ")" : "", entry.driver || "", entry.bus || ""].filter(Boolean).join(", ");
+  const kernel = (data.host && data.host.kernel) || "";
+  const base = document.querySelector('meta[name="report-url"]').content;
+  $("report").href = base + "&wifi_adapter=" + encodeURIComponent(adapter) + "&host_kernel=" + encodeURIComponent(kernel);
+}
 async function poll() {
   if (polling) return;
   polling = true;
@@ -79,6 +121,8 @@ async function poll() {
     if (epoch !== viewEpoch) return;
     controls(data.state, data);
     showAdapters(data);
+    showHelper(data.helper);
+    updateReportLink(data);
     $("adapter").textContent = data.adapter ? data.adapter.name + " · " + data.adapter.phy + " · isolated · AP-capable" : data.selected_adapter ? data.selected_adapter + " · ready to assign on Start" : "Choose a Wi-Fi adapter above";
     if (logGeneration !== data.generation) {
       $("terminal").textContent = "";
@@ -130,6 +174,20 @@ $("adapter-select").onchange = async () => {
   $("start").disabled = true;
   try { await api("api/adapters/select", {interface: selected}); await poll(); }
   catch (error) { adapterView = ""; notice(error.message, true); }
+};
+$("secret-generate").onclick = () => {
+  $("secret-value").textContent = generateSecret();
+  $("secret-box").hidden = false;
+};
+$("secret-copy").onclick = async () => {
+  try {
+    await navigator.clipboard.writeText($("secret-value").textContent);
+    notice("Pairing secret copied. Paste it into the Configuration tab of both apps.");
+  } catch (error) {
+    // Clipboard access can be blocked inside the Ingress frame; select the text instead.
+    window.getSelection().selectAllChildren($("secret-value"));
+    notice("Copying was blocked by the browser. The secret is selected; press Ctrl+C.", true);
+  }
 };
 $("clear-logs").onclick = async () => {
   $("clear-logs").disabled = true;

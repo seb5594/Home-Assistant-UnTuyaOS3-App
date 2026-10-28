@@ -13,11 +13,13 @@ from supplicant import Control
 
 
 class AssociationError(RuntimeError):
+    """Association could not be verified; DHCP must not start."""
     pass
 
 
 @dataclass(frozen=True)
 class AccessPoint:
+    """One open access point seen in a scan."""
     ssid: str
     bssid: str
     frequency: int
@@ -39,6 +41,7 @@ def access_points(output, ssid):
 
 
 def link_matches(output, point):
+    """True if `iw link` output describes exactly the access point the supplicant reports."""
     mac = re.search(r"(?m)^Connected to ([0-9a-fA-F:]{17})(?:\s|$)", output)
     name = re.search(r"(?m)^\s*SSID: (.*)$", output)
     freq = re.search(r"(?m)^\s*freq: ([0-9]+)(?:\.0+)?\s*$", output)
@@ -47,6 +50,7 @@ def link_matches(output, point):
 
 
 def command(*args, timeout=8):
+    """Run a fixed command, return (exit code, combined output); a timeout is reported as 124."""
     try:
         result = subprocess.run(args, capture_output=True, text=True, timeout=timeout,
                                 env={**os.environ, "LC_ALL": "C"})
@@ -60,11 +64,13 @@ def command(*args, timeout=8):
 
 
 def report(label, result, log):
+    """Log a command result in one line."""
     code, output = result
     log(f"{label}: exit={code}; {output.strip() or '(no output)'}")
 
 
 def diagnostics(adapter, log, run):
+    """Log adapter, driver and read-only radio information to help with weak-signal reports."""
     driver = Path(f"/sys/class/net/{adapter.name}/device/driver")
     log(f"Adapter={adapter.name}; radio={adapter.phy}; driver={driver.resolve().name if driver.exists() else 'unknown'}; "
         f"kernel={platform.release()}")
@@ -76,6 +82,10 @@ def diagnostics(adapter, log, run):
 
 def associate(adapter, ssid, log=print, run=command, guard=same_device, wait=time.sleep,
               control=None, checks=45):
+    """Join the open device AP through the private supplicant and verify the link independently.
+
+    DHCP only starts once the supplicant reports COMPLETED *and* `iw` agrees on SSID, BSSID and
+    frequency. The network entry is removed again if anything fails."""
     guard(adapter)
     if not ssid or len(ssid.encode("utf-8")) > 32 or any(ord(c) < 32 for c in ssid):
         raise AssociationError("Invalid selected SSID")
@@ -144,6 +154,7 @@ def associate(adapter, ssid, log=print, run=command, guard=same_device, wait=tim
 
 
 def main():
+    """Entry point called by the patched upstream connect script."""
     if len(sys.argv) != 3:
         raise AssociationError("Expected the approved Wi-Fi interface and selected SSID")
     name, ssid = sys.argv[1:]

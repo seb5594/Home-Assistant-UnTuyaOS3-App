@@ -1,4 +1,9 @@
-"""One fixed upstream command in a PTY, with live output, timeout and scoped cleanup."""
+"""Run the one fixed upstream command in a PTY, with live output, a timeout and scoped cleanup.
+
+A session has four phases: bring up the private Wi-Fi controller, start UnTuyaOS3.sh on a
+pseudo terminal, pump its output to the journal until it ends (or is cancelled / times out),
+and finally undo everything again. The cleanup phase always runs, whatever went wrong.
+"""
 import codecs
 import errno
 import os
@@ -15,9 +20,21 @@ from wifi import cleanup, discover, same_device
 from supplicant import Supplicant
 
 ANSI = re.compile(r"\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1b\\))")
+HEALTH_CHECK_SECONDS = 1   # How often the adapter identity is verified while a session runs.
+HEARTBEAT_SECONDS = 10     # How often a "still waiting" line is logged.
+KILL_GRACE_SECONDS = 5     # Time between SIGTERM and SIGKILL when stopping the script.
+TERMINAL_SIZE = (32, 120)  # Rows, columns reported to the script.
+# Exit codes of the patched ap-ota.py that mean something other than "failed".
+RESULT_BY_EXIT_CODE = {0: "finished", 3: "unconfirmed"}
 
 
 class Runner:
+    """State machine for one UnTuyaOS3 session at a time (see :attr:`state`).
+
+    States: select_adapter -> ready -> assigning -> running -> cleaning -> releasing ->
+    finished | unconfirmed | cancelled | failed. The Web UI only reads these names.
+    """
+
     def __init__(self, options, journal, fatal, root="/opt/untuyaos3", runtime="/run"):
         self.options, self.journal, self.fatal = options, journal, fatal
         self.root = Path(root)
@@ -29,15 +46,18 @@ class Runner:
         self.completed = None
 
     def preflight(self):
+        """Look up the leased radio inside this app's namespace and mark the runner ready."""
         self.adapter = discover(self.options["interface"], self.journal.emit)
         self.state = "ready"
 
     def status(self):
+        """Snapshot for the Web UI."""
         with self.lock:
             return {"state": self.state, "exit_code": self.exit_code,
                     "adapter": self.adapter.as_dict() if self.adapter else None}
 
     def start(self):
+        """Begin a session in a background thread, after re-checking that the radio is still ours."""
         with self.lock:
             if self.state not in ("ready", "finished", "unconfirmed", "cancelled", "failed") or self.fatal.is_set():
                 raise ValueError("A run is already active or the app is shutting down")
@@ -56,6 +76,7 @@ class Runner:
             self.thread.start()
 
     def input(self, choice):
+        """Forward a numeric menu choice to the script. Anything but digits is refused."""
         if not isinstance(choice, str) or not re.fullmatch(r"[0-9]{1,5}", choice):
             raise ValueError("Enter the numeric choice requested by UnTuyaOS3")
         with self.lock:
@@ -65,6 +86,7 @@ class Runner:
             self.journal.emit("info", "Sent numeric menu choice to UnTuyaOS3")
 
     def cancel(self):
+        """Ask the script's process group to stop. Cleanup still runs afterwards."""
         with self.lock:
             self.cancelled.set()
             if self.process and self.process.poll() is None:
@@ -74,10 +96,22 @@ class Runner:
                     pass
                 self.journal.emit("warning", "Cancellation requested; interrupting flashing can leave a device unusable")
 
+    def _session_environment(self, session_dir, control_path):
+        """Environment of the script: only what it needs, plus the identity of the approved radio."""
+        env = {key: os.environ[key] for key in ("PATH", "LANG") if key in os.environ}
+        env.update(PYTHONUNBUFFERED="1", TERM="dumb", LC_ALL="C.UTF-8",
+                   UNTUYAOS3_SKIP_INSTALL="1", UNTUYAOS3_ALLOWED_IFACE=self.adapter.name,
+                   UNTUYAOS3_ALLOWED_PHY=self.adapter.phy, UNTUYAOS3_ALLOWED_IFINDEX=str(self.adapter.ifindex))
+        env["UNTUYAOS3_WPA_CONTROL"] = control_path
+        env["UNTUYAOS3_RUN_DIR"] = session_dir
+        env["UNTUYAOS3_RUN_ID"] = secrets.token_hex(16)
+        return env
+
     def _run(self):
         slave = None
         connection = None
         session = None
+        outcome = "cancelled"  # Stays this way if the session is cancelled before the script starts.
         started, heartbeat, health, terminating = time.monotonic(), time.monotonic(), time.monotonic(), None
         decoder = codecs.getincrementaldecoder("utf-8")("replace")
         try:
@@ -89,14 +123,8 @@ class Runner:
                                     self.journal.emit, self.cancelled)
             control_path = connection.start()
             self.master, slave = os.openpty()
-            fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 32, 120, 0, 0))
-            env = {key: os.environ[key] for key in ("PATH", "LANG") if key in os.environ}
-            env.update(PYTHONUNBUFFERED="1", TERM="dumb", LC_ALL="C.UTF-8",
-                       UNTUYAOS3_SKIP_INSTALL="1", UNTUYAOS3_ALLOWED_IFACE=self.adapter.name,
-                       UNTUYAOS3_ALLOWED_PHY=self.adapter.phy, UNTUYAOS3_ALLOWED_IFINDEX=str(self.adapter.ifindex))
-            env["UNTUYAOS3_WPA_CONTROL"] = control_path
-            env["UNTUYAOS3_RUN_DIR"] = session.name
-            env["UNTUYAOS3_RUN_ID"] = secrets.token_hex(16)
+            fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", *TERMINAL_SIZE, 0, 0))
+            env = self._session_environment(session.name, control_path)
             args = ["bash", str(self.root / "UnTuyaOS3.sh"), "--verbose", "--interface", self.adapter.name]
             self.journal.emit("info", "Starting pinned UnTuyaOS3.sh with verbose TX/RX logging")
             with self.lock:
@@ -109,10 +137,10 @@ class Runner:
             slave = None
             while True:
                 now = time.monotonic()
-                if now-health >= 1:
+                if now-health >= HEALTH_CHECK_SECONDS:
                     same_device(self.adapter)
                     health = now
-                if now-heartbeat >= 10:
+                if now-heartbeat >= HEARTBEAT_SECONDS:
                     same_device(self.adapter)
                     if connection.process.poll() is not None:
                         raise RuntimeError("Wi-Fi supplicant stopped unexpectedly; ending this run")
@@ -124,7 +152,7 @@ class Runner:
                         self.journal.emit("error", f"Run timeout reached ({self.options['run_timeout']}s)")
                     self.cancel()
                     terminating = now
-                if terminating and now-terminating > 5 and self.process.poll() is None:
+                if terminating and now-terminating > KILL_GRACE_SECONDS and self.process.poll() is None:
                     os.killpg(self.process.pid, signal.SIGKILL)
                 readable, _, _ = select.select([self.master], [], [], 0.25)
                 if readable:
@@ -145,7 +173,7 @@ class Runner:
             tail = decoder.decode(b"", final=True)
             if tail:
                 self.journal.emit("info", tail, "terminal")
-            outcome = "cancelled" if self.cancelled.is_set() else ({0: "finished", 3: "unconfirmed"}.get(self.exit_code, "failed"))
+            outcome = "cancelled" if self.cancelled.is_set() else RESULT_BY_EXIT_CODE.get(self.exit_code, "failed")
             self.state = "cleaning"
             self.journal.emit("warning" if outcome == "unconfirmed" else "info" if self.exit_code == 0 else "error",
                               f"UnTuyaOS3 exited with status {self.exit_code}; result={outcome}")
@@ -206,9 +234,10 @@ class Runner:
                     self.completed()
                 except Exception as exc:
                     self.journal.emit("error", f"Adapter release pending: {exc}")
-            self.state = locals().get("outcome", "cancelled")
+            self.state = outcome
 
     def shutdown(self):
+        """Stop a running session and wait briefly for its cleanup."""
         self.cancel()
         if self.thread:
             self.thread.join(timeout=10)

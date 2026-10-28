@@ -11,11 +11,13 @@ WIFI_DRIVER = re.compile(r"^(?:ath|rtw|rtl|brcm|mt76|mt79|rt2500|rt73|rt2800|rt2
 
 
 def host_drivers(root=Path("/sys/module")):
+    """Kernel release and loaded Wi-Fi modules (read-only)."""
     return {"kernel": platform.release(),
             "loaded_wifi_modules": sorted(p.name for p in root.iterdir() if WIFI_DRIVER.match(p.name)) if root.exists() else []}
 
 
 def driver_name(device):
+    """Name of the kernel driver bound to a sysfs device, if any."""
     driver = device / "driver"
     try:
         return driver.resolve().name if driver.exists() else None
@@ -24,6 +26,7 @@ def driver_name(device):
 
 
 def adapter_details(name, sys_net=Path("/sys/class/net")):
+    """Driver, bus and USB path of an interface."""
     device = sys_net / name / "device"
     path = device.resolve().as_posix()
     return {"driver": driver_name(device), "bus": "USB" if "/usb" in path else "PCI/internal",
@@ -32,6 +35,7 @@ def adapter_details(name, sys_net=Path("/sys/class/net")):
 
 
 def usb_devices(root=Path("/sys/bus/usb/devices"), leased=None):
+    """Wi-Fi relevant USB devices, so the UI can tell a missing driver from a missing adapter."""
     devices = []
     for device in sorted(root.iterdir()) if root.exists() else []:
         try:
@@ -57,6 +61,7 @@ def usb_devices(root=Path("/sys/bus/usb/devices"), leased=None):
 
 
 def inventory(validate, log, leased=None):
+    """Everything the main app's adapter list needs: adapters with eligibility, USB devices, host drivers."""
     adapters = []
     for interface in parse_interfaces(command("iw", "dev"))[:16]:
         entry = {**interface, **adapter_details(interface["name"]), "eligible": False, "reason": ""}

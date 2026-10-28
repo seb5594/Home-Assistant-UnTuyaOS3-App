@@ -10,10 +10,15 @@ from wifi import same_device
 
 
 def validate_lease(environment, routes):
+    """Return the validated lease address (see lease_details)."""
     return lease_details(environment, routes)[0]
 
 
 def lease_details(environment, routes):
+    """Validate a DHCP lease and return (address/prefix, device endpoint).
+
+    The device endpoint is the DHCP server/router. It has to be unambiguous, on-link and must not
+    overlap any other network of this app, otherwise the lease is refused."""
     name = environment.get("interface", "")
     if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9_.-]{1,15}", name) or name != environment.get("UNTUYAOS3_ALLOWED_IFACE"):
         raise ValueError("DHCP hook was called for an unapproved interface")
@@ -35,6 +40,7 @@ def lease_details(environment, routes):
 
 
 def main():
+    """udhcpc hook: configure only the approved interface and remember the OTA target for this session."""
     event = sys.argv[1]
     if event not in ("bound", "renew", "deconfig"):
         return

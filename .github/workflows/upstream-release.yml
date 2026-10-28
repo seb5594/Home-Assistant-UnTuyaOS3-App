@@ -1,0 +1,82 @@
+name: Follow upstream releases
+
+# Once a day: did tuya-cloudcutter/UnTuyaOS3 publish a new release? If so, a pull request
+# against dev pins the new revision, raises the app version and reports whether the reviewed
+# patches still apply. The CI of that pull request then builds both images.
+# Nothing is merged or published by this workflow; see tools/follow_upstream.py.
+#
+# Scheduled runs only start from the default branch, which is why this file lives on main.
+# Add a repository secret ORCHESTRATION_PAT (same as ci.yml) so the pull request starts CI;
+# with the plain workflow token the pull request is created but GitHub does not run CI on it.
+
+on:
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+    inputs:
+      track:
+        description: What counts as news upstream
+        type: choice
+        options: [release, head]
+        default: release
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  follow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ secrets.ORCHESTRATION_PAT || github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: dev
+          token: ${{ secrets.ORCHESTRATION_PAT || github.token }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Look for a new upstream release
+        id: check
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TRACK: ${{ inputs.track || 'release' }}
+        run: python3 tools/follow_upstream.py check --track "$TRACK"
+      - name: Skip when a branch for this revision already exists
+        id: branch
+        if: steps.check.outputs.update == 'true'
+        env:
+          LABEL: ${{ steps.check.outputs.label }}
+        run: |
+          branch="upstream/${LABEL//[^A-Za-z0-9._-]/-}"
+          echo "name=$branch" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --heads origin "$branch" > /dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "$branch exists already; its pull request is the place to continue."
+          fi
+      - name: Pin the new revision
+        if: steps.check.outputs.update == 'true' && steps.branch.outputs.exists != 'true'
+        env:
+          REVISION: ${{ steps.check.outputs.revision }}
+          LABEL: ${{ steps.check.outputs.label }}
+          REASON: ${{ steps.check.outputs.reason }}
+        run: |
+          python3 -m pip install --quiet pyyaml
+          python3 tools/follow_upstream.py apply --revision "$REVISION" --label "$LABEL" \
+            --reason "$REASON" --body-file "$RUNNER_TEMP/body.md"
+      - name: Open the pull request against dev
+        if: steps.check.outputs.update == 'true' && steps.branch.outputs.exists != 'true'
+        env:
+          BRANCH: ${{ steps.branch.outputs.name }}
+          LABEL: ${{ steps.check.outputs.label }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add -A
+          git commit -m "Update UnTuyaOS3 to $LABEL"
+          git push origin "$BRANCH"
+          gh pr create --base dev --head "$BRANCH" \
+            --title "Update UnTuyaOS3 to $LABEL" --body-file "$RUNNER_TEMP/body.md"

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.0
+
+First stable release; released together with the main app.
+
+- Report the helper's version to the main app so a mismatch is shown in the Web UI.
+- New icon and logo.
+- Remove the experimental stage; documentation updated.
+
 ## 1.0.0-beta.4
 
 - Add a prominent README danger warning about bricking, lack of warranty and user responsibility.

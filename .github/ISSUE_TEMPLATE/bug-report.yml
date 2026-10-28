@@ -1,0 +1,47 @@
+name: Bug report
+description: The app itself misbehaves (UI, adapter handover, crashes). For device results use the device report instead.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This form is for problems with the **Home Assistant apps** (Web UI, Wi-Fi helper, adapter handover, cleanup).
+
+        - Did a device not accept the exploit, or did you just want to say how a device went? Use **Device report**.
+        - Is it about the exploit or the firmware itself? That is the [upstream project](https://github.com/tuya-cloudcutter/UnTuyaOS3).
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What went wrong?
+      description: What did you do, what did you expect, what happened instead?
+    validations:
+      required: true
+
+  - type: input
+    id: app_version
+    attributes:
+      label: App version
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: wifi_adapter
+    attributes:
+      label: Wi-Fi adapter
+      placeholder: "Atheros AR9271 (0cf3:9271), ath9k_htc, USB"
+
+  - type: input
+    id: haos_version
+    attributes:
+      label: Home Assistant OS version
+      placeholder: "17.1"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: The Log tab of **both** apps, or the downloaded ZIP from the Web UI. Please remove keys and device identifiers first.
+      render: text

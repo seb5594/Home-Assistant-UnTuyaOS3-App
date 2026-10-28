@@ -1,10 +1,16 @@
-"""Ingress-only HTTP UI; fixed upstream command, numeric menu input and live event polling."""
+"""Ingress-only HTTP UI; fixed upstream command, numeric menu input and live event polling.
+
+The server never builds a shell command from a request: the only things a browser can do
+are start/stop the one fixed UnTuyaOS3 session, answer its numbered menu, pick an adapter
+and manage the firmware library and logs. Every POST needs the CSRF token of this process.
+"""
 import hmac
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import io
 import json
 import os
 from pathlib import Path
+import re
 import secrets
 import shutil
 import signal
@@ -15,22 +21,36 @@ import zipfile
 
 from journal import Journal
 from devices import Devices
+from links import render_page
 from protocol import validate_options
 from request_body import RequestBodyError, read_body
 from runner import Runner
 
 STATIC = Path(__file__).parent / "static"
+INGRESS_PORT = 8099
+SUPERVISOR_ADDRESS = "172.30.32.2"  # The only peer Home Assistant Ingress connects from.
+# UG image signatures per platform: (offset, magic bytes). They prove the format, not suitability.
 MAGIC = {"T1": (0, bytes.fromhex("4d4d4d00")), "BK7231N": (0, bytes.fromhex("55aa55aa")),
          "RTL8720CF": (32, bytes.fromhex("68513ef83e396b12ba059a900f36b6d3"))}
 MAX_UPLOAD = 32 * 1024 * 1024
+MAX_JSON_BODY = 2048
+MAX_FIRMWARE_PER_PLATFORM = 30
+FIRMWARE_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,119}\.bin")
+POST_PATHS = ("/api/start", "/api/input", "/api/cancel", "/api/firmware", "/api/logs/clear",
+              "/api/adapters/refresh", "/api/adapters/select")
 
 
 def firmware_valid(platform, data):
+    """True if ``data`` starts with the UG signature of ``platform``."""
     offset, magic = MAGIC[platform]
     return data[offset:offset+len(magic)] == magic
 
 
 def prepare_firmware(root, data):
+    """Move the bundled firmware into persistent storage once and link the upstream folder to it.
+
+    Uploaded images survive restarts this way, and the upstream script lists them in its menu.
+    """
     source = root / "custom-firmware"
     target = data / "firmware"
     target.mkdir(exist_ok=True)
@@ -47,6 +67,7 @@ def prepare_firmware(root, data):
 
 
 class Server(ThreadingHTTPServer):
+    """HTTP server holding the shared state its request handlers work with."""
     daemon_threads = True
 
     def __init__(self, address, runner, journal, firmware, devices=None):
@@ -57,6 +78,7 @@ class Server(ThreadingHTTPServer):
 
 
 class Handler(BaseHTTPRequestHandler):
+    """One request. GET serves the page and read-only status, POST changes state."""
     server_version = "UnTuyaOS3"
     sys_version = ""
 
@@ -84,7 +106,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def trusted(self):
         # Never trust forwarded addresses or a caller-provided user header.
-        if self.client_address[0] != "172.30.32.2":
+        if self.client_address[0] != SUPERVISOR_ADDRESS:
             self.reply(403, {"error": "Home Assistant Ingress access required"})
             return False
         return True
@@ -94,8 +116,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         parsed = urlsplit(self.path)
         if parsed.path in ("/", "/index.html"):
-            page = (STATIC / "index.html").read_text(encoding="utf-8").replace("__CSRF__", self.server.csrf)
-            page = page.replace("__VERSION__", json.loads(Path(__file__).with_name("build_info.json").read_text())["version"])
+            page = render_page((STATIC / "index.html").read_text(encoding="utf-8"), self.server.csrf)
             return self.reply(200, page, "text/html; charset=utf-8")
         if parsed.path in ("/app.js", "/style.css"):
             mime = "text/javascript" if parsed.path.endswith(".js") else "text/css"
@@ -130,10 +151,10 @@ class Handler(BaseHTTPRequestHandler):
         if not hmac.compare_digest(self.headers.get("X-CSRF-Token", "").encode("utf-8"), self.server.csrf.encode("utf-8")):
             return self.reply(403, {"error": "Invalid request token; reload the app"})
         path = urlsplit(self.path).path
-        if path not in ("/api/start", "/api/input", "/api/cancel", "/api/firmware", "/api/logs/clear", "/api/adapters/refresh", "/api/adapters/select"):
+        if path not in POST_PATHS:
             return self.reply(404, {"error": "Not found"})
         try:
-            limit = MAX_UPLOAD if path == "/api/firmware" else 2048
+            limit = MAX_UPLOAD if path == "/api/firmware" else MAX_JSON_BODY
             body, framing = read_body(self.headers, self.rfile, limit)
             self.server.journal.emit("info", f"UI request {path}: {len(body)} bytes received via {framing}")
             if path == "/api/firmware":
@@ -166,10 +187,10 @@ class Handler(BaseHTTPRequestHandler):
             self.reply(400, {"error": str(exc)})
 
     def upload(self, data):
-        import re
+        """Store an uploaded UG image after checking name, platform signature and library limits."""
         platform = self.headers.get("X-Firmware-Platform", "")
         name = self.headers.get("X-Firmware-Name", "")
-        if platform not in MAGIC or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,119}\.bin", name):
+        if platform not in MAGIC or not FIRMWARE_NAME.fullmatch(name):
             raise ValueError("Choose a platform and a .bin filename using letters, digits, dots, hyphens or underscores")
         if not firmware_valid(platform, data):
             raise ValueError("Firmware signature does not match the selected platform (UG image required)")
@@ -177,8 +198,8 @@ class Handler(BaseHTTPRequestHandler):
             if self.server.runner.state == "running":
                 raise ValueError("Wait for the active run to finish before uploading firmware")
             folder = self.server.firmware / platform
-            if len(list(folder.glob("*.bin"))) >= 30:
-                raise ValueError("Firmware limit reached (30 per platform)")
+            if len(list(folder.glob("*.bin"))) >= MAX_FIRMWARE_PER_PLATFORM:
+                raise ValueError(f"Firmware limit reached ({MAX_FIRMWARE_PER_PLATFORM} per platform)")
             target = folder / name
             if target.exists():
                 raise ValueError("That filename already exists; use a new name")
@@ -189,6 +210,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
+    """Start the app: journal, runner, device manager and the Ingress server. Returns the exit code."""
     data, root = Path("/data"), Path("/opt/untuyaos3")
     journal = Journal(data / "logs")
     fatal = threading.Event()
@@ -198,7 +220,11 @@ def main():
         signal.signal(sig, lambda *_: requested_stop.set())
     try:
         options = json.loads((data / "options.json").read_text())
-        validate_options(options)
+        try:
+            validate_options(options)
+        except ValueError as exc:
+            # Keep the Web UI up: its helper card explains how to set the secret.
+            journal.emit("warning", f"{exc} The Web UI shows how to pair the apps.")
         timeout = options.get("run_timeout", 1800)
         if type(timeout) is not int or not 60 <= timeout <= 7200:
             raise ValueError("run_timeout must be 60..7200 seconds")
@@ -208,10 +234,11 @@ def main():
         firmware = prepare_firmware(root, data)
         runner = Runner(options, journal, fatal, root)
         devices = Devices(options, runner, journal, fatal, data)
-        server = Server(("0.0.0.0", 8099), runner, journal, firmware, devices)
+        server = Server(("0.0.0.0", INGRESS_PORT), runner, journal, firmware, devices)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
         threading.Thread(target=devices.initialize, daemon=True).start()
+        threading.Thread(target=devices.watch_helper, args=(requested_stop,), daemon=True).start()
         journal.emit("info", "Ingress ready. Open Web UI to select or refresh adapters, then start a session")
         while not requested_stop.wait(0.25):
             if fatal.is_set():

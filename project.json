@@ -1,7 +1,8 @@
 {
-  "version": "1.0.0-beta.4",
+  "version": "1.0.0",
   "protocol": 3,
   "base_image": "ghcr.io/home-assistant/base-python:3.13-alpine3.24@sha256:c7d34ae22a87275d46deb65bcb0511b389d7bc6eb8dccb28d44dd7cb8616e603",
+  "upstream_repository": "tuya-cloudcutter/UnTuyaOS3",
   "upstream_revision": "2111458225c269ddddf5353bf09a1e8f1096d959",
   "python_packages": {"pycryptodome": "3.23.0", "py-datastruct": "2.0.0", "sslpsk3": "2.1.0"},
   "packages": {
@@ -14,21 +15,21 @@
   "common_config": {
     "url": "https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App",
     "arch": ["amd64", "aarch64"], "startup": "application", "boot": "manual_only",
-    "stage": "experimental", "init": false, "apparmor": true,
+    "init": false, "apparmor": true,
     "map": [{"type": "share", "read_only": false}]
   },
   "common_options": {"pairing_token": ""},
   "common_schema": {"pairing_token": "password"},
   "apps": {
     "untuyaos3": {
-      "config": {"name": "UnTuyaOS3", "description": "Interactive UnTuyaOS3 with adapter selection, isolated Wi-Fi and live logs", "timeout": 30,
+      "config": {"name": "UnTuyaOS3", "description": "Flash compatible Tuya devices with open firmware from Home Assistant (UnTuyaOS3), with live console and isolated Wi-Fi", "timeout": 30,
         "ingress": true, "ingress_port": 8099, "ingress_stream": true, "panel_title": "UnTuyaOS3", "panel_icon": "mdi:chip", "panel_admin": true,
         "privileged": ["NET_ADMIN", "NET_RAW"]},
       "options": {"run_timeout": 1800}, "schema": {"run_timeout": "int(60,7200)"},
       "packages": ["bash", "iw", "iproute2", "busybox", "tini", "wpa_supplicant"]
     },
     "untuyaos3_wifi": {
-      "config": {"name": "UnTuyaOS3 Wi-Fi Helper", "description": "Discovers idle Wi-Fi adapters and assigns one to the isolated UnTuyaOS3 app", "timeout": 60,
+      "config": {"name": "UnTuyaOS3 Wi-Fi Helper", "description": "Companion of UnTuyaOS3: hands one idle Wi-Fi adapter to the main app and takes it back afterwards", "timeout": 60,
         "host_network": true, "host_dbus": true, "privileged": ["NET_ADMIN"]},
       "options": {}, "schema": {}, "packages": ["iw", "iproute2", "busctl", "tini"]
     }

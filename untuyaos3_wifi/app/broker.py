@@ -13,7 +13,8 @@ import threading
 import time
 
 from journal import Journal
-from protocol import INVENTORY, SOCKET, receive, secure_directory, send, server_authenticate, validate_options
+from protocol import (APP_VERSION, INVENTORY, PROTOCOL_VERSION, SOCKET, receive, secure_directory, send,
+                      server_authenticate, validate_options)
 from inventory import adapter_details, inventory, usb_devices
 from wifi import NM, PreflightError, bus, command, inspect, nm_unmanaged, parse_interfaces, radio_unblocked
 
@@ -22,6 +23,7 @@ stopping = threading.Event()
 
 
 def nm_properties(name, log=None):
+    """Read NetworkManager state of a device; refuse anything that is not idle. Returns whether it is managed."""
     path = bus("call", NM, "/org/freedesktop/NetworkManager", NM, "GetDeviceByIpIface", "s", name)
     iface = NM + ".Device"
     managed = bus("get-property", NM, path, iface, "Managed")
@@ -36,12 +38,14 @@ def nm_properties(name, log=None):
 
 
 def nm_set(name, managed):
+    """Switch NetworkManager's Managed flag of exactly one device."""
     path = bus("call", NM, "/org/freedesktop/NetworkManager", NM, "GetDeviceByIpIface", "s", name)
     command("busctl", "--system", "--timeout=5", "--allow-interactive-authorization=no",
             "set-property", NM, path, NM + ".Device", "Managed", "b", "true" if managed else "false")
 
 
 def check_target(fd):
+    """Accept only a network namespace descriptor that is not the host's own namespace."""
     import fcntl
     # NS_GET_NSTYPE: reject regular files, user namespaces and the host's own netns.
     if fcntl.ioctl(fd, 0xb703) != 0x40000000:
@@ -53,6 +57,7 @@ def check_target(fd):
 
 
 def validate_host(name, log):
+    """Run all host-side safety checks for one interface. Returns the adapter and a recovery snapshot."""
     interfaces = parse_interfaces(command("iw", "dev"))
     log("info", f"Host Wi-Fi inventory: {interfaces}")
     selected = next((i for i in interfaces if i["name"] == name), None)
@@ -77,6 +82,7 @@ def validate_host(name, log):
 
 
 def restore(snapshot, log, wait=30):
+    """Wait for the leased radio to reappear on the host (matched by MAC and device identity) and restore its settings."""
     deadline = time.monotonic() + wait
     while True:
         interfaces = parse_interfaces(command("iw", "dev"))
@@ -124,6 +130,7 @@ def restore(snapshot, log, wait=30):
 
 
 def try_restore(snapshot, log):
+    """Single non-blocking restore attempt; remembers the error so it is logged only once."""
     try:
         restore(snapshot, log, wait=0)
         return True
@@ -136,6 +143,7 @@ def try_restore(snapshot, log):
 
 
 def handover(fd, interface, log):
+    """Move the selected radio into the app's namespace. A recovery record is written first and restored on failure."""
     check_target(fd)
     adapter, snapshot = validate_host(interface, log)
     # Durable recovery data before changing host state.
@@ -169,6 +177,7 @@ def handover(fd, interface, log):
 
 
 def main():
+    """Run the broker: serve inventory, lease and return requests until stopped."""
     DATA.mkdir(exist_ok=True)
     journal = Journal(DATA / "logs")
     snapshot, server, peer = None, None, None
@@ -238,6 +247,7 @@ def main():
                     if request.get("operation") != "inventory" or fds:
                         raise ValueError("Inventory requests must not contain namespace descriptors")
                     result = inventory(validate_host, journal.emit, snapshot if peer else None)
+                    result["helper"] = {"version": APP_VERSION, "protocol": PROTOCOL_VERSION}
                     result["recovery_pending"] = snapshot.get("recovery_error", "Waiting for radio return") if snapshot and peer is None else ""
                     send(client, result)
                     continue

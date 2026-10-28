@@ -1,14 +1,34 @@
-"""Request a radio from the companion app without access to the host network."""
+"""Request a radio from the Wi-Fi helper app without any access to the host network.
+
+The helper owns the host side of the handover (see untuyaos3_wifi/app/broker.py). This
+module is the client: it lists adapters, asks for one radio to be moved into this app's
+network namespace and gives it back when the session is over.
+"""
 import os
 import socket
 import threading
 import subprocess
 import json
 from wifi import same_device, PreflightError, command
-from protocol import INVENTORY, SOCKET, client_authenticate, receive, send, validate_interface, validate_options
+from protocol import (INVENTORY, SOCKET, PairingFailed, ProtocolMismatch, SecretNotSet,
+                      client_authenticate, receive, send, validate_interface, validate_options)
+
+
+class HelperUnavailable(RuntimeError):
+    """The helper's socket is missing or refuses connections (helper not running)."""
+
+
+def helper_state(error):
+    """Map a failed helper call to the state name the Web UI uses for its setup card."""
+    for kind, state in ((SecretNotSet, "not_configured"), (HelperUnavailable, "unreachable"),
+                        (PairingFailed, "pairing"), (ProtocolMismatch, "protocol")):
+        if isinstance(error, kind):
+            return state
+    return "error"
 
 
 def connect(options, scope):
+    """Open an authenticated connection to the helper for one scope (an interface or INVENTORY)."""
     _, token = validate_options(options)
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
     sock.settimeout(45)
@@ -16,7 +36,7 @@ def connect(options, scope):
         try:
             sock.connect(SOCKET)
         except OSError as exc:
-            raise RuntimeError("Wi-Fi Helper unavailable. Start it first, then refresh adapters in this Web UI") from exc
+            raise HelperUnavailable("Wi-Fi Helper unavailable. Start it first, then refresh adapters in this Web UI") from exc
         client_authenticate(sock, scope, token)
         return sock
     except BaseException:
@@ -25,6 +45,7 @@ def connect(options, scope):
 
 
 def inventory(options):
+    """Ask the helper which adapters and USB devices it can see on the host."""
     with connect(options, INVENTORY) as sock:
         send(sock, {"operation": "inventory"})
         message, fds = receive(sock)
@@ -36,6 +57,12 @@ def inventory(options):
 
 
 class Lease:
+    """One radio on loan from the helper, for the duration of a session.
+
+    Creating a Lease performs the handover. The connection stays open while the radio is
+    ours: if the helper dies, the watcher thread flags it so the app can shut down safely.
+    """
+
     def __init__(self, options, journal, lost, interface):
         validate_interface(interface)
         self.options, self.interface, self.journal = options, interface, journal

@@ -1,19 +1,24 @@
-# Using UnTuyaOS3
+# UnTuyaOS3
 
-Experimental. Install **UnTuyaOS3 Wi-Fi Helper** from the same repository. Enter the same private pairing secret of at least 32 characters in both apps' Configuration tabs. No interface name or hostname is required. Update both apps together; 1.0.0-beta.2 uses helper protocol v3.
+> **Flashing can brick your device. Use this at your own risk.** A finished transfer does not promise that the device boots afterwards. Only flash devices you can afford to lose.
 
-Start the helper first, then this app. Open the Web UI. A single eligible adapter is selected automatically; choose from the dropdown when several are available. **Refresh adapters** detects newly plugged USB devices. **USB detection** distinguishes enumeration, driver binding and a usable WLAN interface. Press **Start interactive session** and submit the script's numeric choices. Console and diagnostics update continuously.
+This app puts open firmware on **some** Tuya devices over Wi-Fi, using the [UnTuyaOS3](https://github.com/tuya-cloudcutter/UnTuyaOS3) exploit of the tuya-cloudcutter community. The exploit and the scripts are theirs, this app wraps them for Home Assistant. Not every device is affected: check the firmware version against the [compatibility list](https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/blob/main/docs/compatibility.md) and upstream's wiki first.
 
-Integrated and USB Wi-Fi require AP and namespace support. The dedicated interface must be disconnected, without addresses/routes or bridge membership. Use Ethernet for Home Assistant management.
+## Setup
 
-Upload additional UG images in the Web UI. **Clear logs** clears saved app logs and both panels without stopping a session. **Download logs** exports retained logs; download before restarting because each app starts with fresh logs. Home Assistant's own Log history is managed separately. If startup fails, read both apps' **Log** tabs. No terminal commands are required.
+1. Install **UnTuyaOS3 Wi-Fi Helper** from the same repository. It is a separate app on purpose, because only it may touch the host network.
+2. Enter the **same** pairing secret (at least 32 characters) in the Configuration tab of both apps. The Web UI can generate one for you.
+3. Start the helper and wait for *Ready*, then start this app and open the Web UI. The helper card at the top tells you what is missing. This page finds the helper by itself as soon as it runs.
 
-The private nl80211 controller retries association and verifies the live link before DHCP. It temporarily disables power saving only when the original setting can be restored. Restore the device's AP pairing mode, check antennas or choose another adapter when reception is very weak. A driver/reception fault cannot be guaranteed fixed by these retries.
+Keep Home Assistant on Ethernet and keep Protection mode and AppArmor on. The adapter you flash with is borrowed from the host and handed back afterwards.
 
-After each completed, failed or cancelled session, the radio is returned and the dropdown unlocks when restoration finishes. The initial AP scan stops after 90 seconds without a match. A missing adapter aborts the run; reconnect USB hardware and refresh after recovery. Stop the app after use. The helper restores the original settings and stays ready. See the English repository README for full instructions and permissions.
+## Using it
 
-DHCP-derived OTA targets support device subnets such as `192.168.175.x` and `192.168.176.x`. The endpoint must be on-link and reachable directly through the selected Wi-Fi adapter; DNS/default routes remain ignored. Session target files are removed after every run, and cleanup verifies the absence of IPv4/IPv6 addresses and dependent routes.
+Choose a Wi-Fi adapter (a single eligible one is picked for you; press **Refresh adapters** after plugging in a USB stick), put the device into AP pairing mode, press **Start interactive session** and answer the script's numbered questions. Console and diagnostics update live, and your session keeps running if you close the page.
 
-An unexpected protocol response such as `0x0C` instead of `0x16` is a separate compatibility/pairing issue. Wi-Fi and DHCP may succeed while the device firmware does not provide the expected UnTuyaOS3 exchange. No later stage is attempted after that mismatch.
+- **Unconfirmed** means all bytes were sent but the device never confirmed. Look for a Kickstart Wi-Fi network before retrying: Kickstart is a generic setup firmware, so a dark lamp can be perfectly alive.
+- **Clear logs** wipes saved logs and both panels without stopping a session. **Download logs** exports them; each app starts with fresh logs, so download before restarting.
+- Your own UG images can be uploaded in the Web UI (32 MiB each, 30 per platform).
+- Stop the app when you are done. The helper restores the adapter.
 
-**Unconfirmed** means all image bytes were transmitted but the device did not acknowledge completion. Check for Kickstart Wi-Fi before retrying. Kickstart is a generic setup firmware; a dark lamp can still be booting normally without its device-specific output configuration. Flashing can permanently brick hardware: use this experimental app entirely at your own risk.
+Something not working? Read the Log tab of both apps, then the [troubleshooting list](https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App#when-something-does-not-work) in the README. Tell us how your device went with **Report a device** at the bottom of the Web UI.

@@ -7,6 +7,7 @@ MAX_TRAILERS = 8192
 
 
 class RequestBodyError(ValueError):
+    """A request body was malformed or too large; carries the HTTP status to answer with."""
     def __init__(self, message, status=400):
         super().__init__(message)
         self.status = status

@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.0
+
+First stable release. The flashing path is unchanged since 1.0.0-beta.4; what is new is around it.
+
+- Add a Wi-Fi Helper card to the Web UI. It tells you whether the helper is missing, not running, paired with a different secret or on another version, and links to the helper's page.
+- Pick up the helper automatically when it starts (and notice when it stops); no more refreshing by hand.
+- Generate a pairing secret in the Web UI. The app now starts without a secret and explains the setup instead of stopping.
+- Show the helper version and warn when it differs from the app.
+- Credit and link the upstream project and its authors in the Web UI. Show the pinned upstream revision.
+- Add a "Report a device" button that opens the compatibility form on GitHub with app version, adapter and kernel filled in.
+- New icon and logo.
+- Remove the experimental stage. README rewritten (English and German); technical details moved to docs/.
+- Code: named constants and docstrings throughout, a clearer runner, tests for the new parts.
+
 ## 1.0.0-beta.4
 
 - Add a prominent README danger warning about bricking, lack of warranty and user responsibility.

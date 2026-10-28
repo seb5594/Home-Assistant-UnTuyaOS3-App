@@ -1,45 +1,83 @@
-# Development
+# Contributing
 
-Use Python 3.10+ for portable tests; runtime images use Python 3.13. Install PyYAML in a development environment, then run:
+Thanks for looking under the hood. This file is the short tour: how to run the checks, how the generated files work, and what a release needs.
 
-```text
+## Quick start
+
+Use Python 3.10 or newer for the portable tests (the images run 3.13) and install PyYAML. Then:
+
+```bash
 python tools/sync_project.py --check
 python -m unittest discover -s tests -v
 node --check untuyaos3/app/static/app.js
+node tests/test_webui.cjs
+```
+
+To build the images locally:
+
+```bash
 docker build -t untuyaos3:dev untuyaos3
 docker build -t untuyaos3-wifi:dev untuyaos3_wifi
 ```
 
-PTY and SCM_RIGHTS tests require Linux. Windows runs portable tests. Wireless commands are mocked: no automated test flashes hardware or disconnects a network.
+The PTY and `SCM_RIGHTS` tests need Linux; on Windows only the portable ones run. All wireless commands are mocked, so no automated test flashes a device or touches a real network.
 
-Association tests cover incomplete supplicant state, mismatched BSSID/SSID/frequency, transient scan misses, control failures and deadline cleanup. Further tests cover USB discovery, adapter selection, private control sockets, power-saving restoration and log generations. Each main-app image also runs the actual patched upstream connection script with stub commands and checks that a failed association verifier prevents DHCP from starting.
+What the tests cover, roughly: the helper handshake and handover, recovery after a vanished USB adapter, association (incomplete supplicant state, wrong BSSID, scan misses, deadlines), DHCP to OTA target, byte accounting of the transfer, request-body framing, the Web UI's rendering and helper card, upstream release tracking and the packaging rules (permissions, AppArmor, translations). Each main-app image additionally runs the real, patched upstream connection script with stub commands and checks that a failed association stops it before DHCP.
 
-Edit shared code in `shared/`, Docker layouts in `templates/`, and version/dependency/configuration definitions in `project.json`. Run `python tools/sync_project.py` and commit generated files. Do not edit generated config.yaml, Dockerfiles, translations, build_info.json or copied modules directly. Update both changelogs for each release. CI rejects drift.
+## Where to edit what
 
-Upstream patches match exact context and fail the image build on drift. Changing the pinned revision requires reviewing upstream shell commands and repeating the privilege review. Do not add a host-network fallback.
+| You want to change | Edit | Then |
+| --- | --- | --- |
+| Version, base image, package pins, options, descriptions, translations | `project.json` | `python tools/sync_project.py` |
+| Code both apps use (`protocol.py`, `wifi.py`, `journal.py`) | `shared/` | `python tools/sync_project.py` |
+| Dockerfile layout | `templates/` | `python tools/sync_project.py` |
+| App code | `untuyaos3/app/` or `untuyaos3_wifi/app/` | |
+| Icons and logos | `assets/branding/*.svg` | `node tools/render_branding.cjs` |
 
-## Hardware acceptance
+Home Assistant builds each app straight from its own folder, so everything generated has to be committed. Never edit a generated `config.yaml`, `Dockerfile`, translation, `build_info.json` or a copied shared module by hand; CI fails when they drift. Add a changelog entry to **both** apps for every release.
 
-Keep both apps experimental until these checks pass on real Home Assistant OS:
+## Branches and releases
 
-- Install both apps with Protection mode and custom AppArmor enabled; exercise features and check audit denials.
-- A single eligible adapter is selected automatically; several require a choice. USB enumeration without a driver/interface is explained in the Web UI.
-- Missing/busy/blocked adapters, IP addresses, routes, shared PHY, missing AP, D-Bus and namespace support all block assignment without closing the diagnostics UI.
-- With Ethernet management, test an integrated adapter and a USB adapter. Verify host Ethernet, DNS and default route are unchanged.
-- Inspect the main app namespace: only the container network and assigned radio are visible.
-- Exercise numbered prompts, invalid choices, verbose output, browser reconnect, firmware upload, log download and Clear logs during a run. Verify restart removes only old app logs.
-- Flash a known-compatible device with verified UG firmware and verify the resulting firmware.
-- Test cancellation, timeout, USB removal, stopping either app first, restarting both apps and reboot recovery.
-- Verify AppArmor blocks unrelated /share files and the broker rejects requests without the pairing secret.
+- `main` is the default branch and the only one that publishes. `dev` is where work lands first. Open pull requests against `dev`, merge `dev` into `main` when it is ready.
+- A new version in `project.json` is what makes the pipeline publish. Versions such as `1.1.0` create a normal release; anything with a suffix (`1.1.0-beta.1`) becomes a pre-release and leaves the stable `latest` tags alone.
+- The pipeline is the standard app caller generated by `hass-workflows`, pinned to a reviewed engine commit. `.github/apps.json` declares both apps as one release bundle, so they always share a version. The engine validates both apps, runs `.github/checks/check_apps.py`, builds amd64 and aarch64 images, runs the image tests in `.github/tests/runtime.sh` and publishes the images with one GitHub release. Pull requests never publish.
+- Use the engine's `managed.py sync app <engine-sha>` to update the caller workflow, Renovate, Dependabot and funding files, and its `readme.py` to refresh the generated README header. Do not replace the caller with your own release logic.
 
-CI validates software and profile syntax, not these hardware outcomes.
+## Following upstream
 
-## Build pipeline
+The upstream project is pinned by commit in `project.json` (`upstream_revision`). `.github/workflows/upstream-release.yml` runs daily, asks GitHub whether `tuya-cloudcutter/UnTuyaOS3` has a newer release (`python tools/follow_upstream.py check`) and, if so, opens a pull request against `dev` that:
 
-The workflow is the standard app caller generated by `hass-workflows` and pinned to a reviewed engine commit. `.github/apps.json` explicitly declares the main app and Wi-Fi helper as one release bundle. Generated configs and Dockerfile defaults use the one release version in `project.json`. Both changelogs describe that version. The apps do not technically need identical versions; this repository deliberately publishes a synchronized bundle.
+- pins the new revision and raises the patch version,
+- adds a changelog entry to both apps,
+- tells you whether `untuyaos3/integration/patch_upstream.py` still applies.
 
-The central engine validates both apps, runs `.github/checks/check_apps.py`, builds amd64 and aarch64 images for each app and runs `.github/tests/runtime.sh` in the built images. It publishes architecture-specific GHCR images, one multi-architecture manifest per app and one GitHub release containing all image references. Versions such as `0.1.1-beta.1` produce prereleases and do not replace stable `latest` image tags. Keep `stage: experimental` in both apps until hardware acceptance is complete.
+Start it by hand from the Actions tab, with *head* instead of *release*, if you want to follow upstream's default branch. Give the repository a secret `ORCHESTRATION_PAT` (the same one the CI uses), otherwise the pull request is created but GitHub does not run CI on it.
 
-Publishing follows the central policy: the default branch and matching version tags publish after successful checks; pull requests do not publish. Already published versions are not replaced on ordinary branch runs. The app store can continue building from source because the configurations do not require prebuilt images.
+Every upstream patch replaces one exact snippet and the image build fails if it no longer matches. That is intended. Before merging a new revision:
 
-Use the engine's `managed.py sync app <engine-sha>` to update the caller, Renovate, Dependabot and funding files, and its `readme.py` to render the README header. These files are checked against the central templates; do not replace the caller with a separate release implementation.
+1. Read the upstream diff, especially shell commands and network calls.
+2. Repeat the privilege review: nothing may gain host networking, DNS or default-route changes, global rfkill changes or broader mounts. Do not add a host-network fallback.
+3. Let CI build both images.
+4. Flash a known-compatible device on real hardware.
+
+## Hardware checklist before a release
+
+CI checks software and profile syntax, not what happens on real Home Assistant OS. Before you tag a release that changes anything near the radio, the namespace handover or the cleanup, go through this on real hardware:
+
+- Install both apps with Protection mode and the custom AppArmor profiles enabled, use every feature and look for audit denials.
+- One eligible adapter is selected automatically, several require a choice, and a USB adapter without driver or interface is explained in the Web UI.
+- Missing, busy and blocked adapters, addresses, routes, a shared PHY, a missing AP mode, no D-Bus and no namespace support each block the assignment without closing the diagnostics UI.
+- With Ethernet as the management connection, test an integrated and a USB adapter. Host Ethernet, DNS and the default route must stay exactly as they were.
+- Inside the main app's namespace only the container network and the assigned radio are visible.
+- Numbered prompts, invalid choices, verbose output, browser reconnect, firmware upload, log download and *Clear logs* during a run. A restart removes only old app logs.
+- Flash a known-compatible device with verified UG firmware and check the result.
+- Cancellation, timeout, USB removal, stopping either app first, restarting both and a reboot all recover.
+- AppArmor blocks unrelated files in `/share`, and the helper rejects requests without the right pairing secret.
+
+## Compatibility reports
+
+Users report devices through the issue form `.github/ISSUE_TEMPLATE/device-report.yml` (the Web UI links to it with some fields prefilled). Those fields are referenced by `tools/compat_report.py` and by the Web UI, and tests keep all three in step. See [docs/compatibility.md](docs/compatibility.md) for how the list is maintained.
+
+## Style
+
+Code and comments are in English. Keep functions small, name constants instead of sprinkling numbers, and write a docstring that says *why* something exists when the code cannot. User-facing messages should make sense to someone who has never seen the source: they are shown verbatim in the Web UI.

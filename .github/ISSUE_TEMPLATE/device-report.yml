@@ -1,0 +1,155 @@
+name: Device report (worked / didn't work)
+description: Tell us which device and chip you tried, so everybody can see what is known to work.
+title: "[Device] "
+labels: ["compatibility"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing! Both good **and** bad results are valuable: a failed attempt saves the next person a lot of time.
+
+        **Please do not paste** local keys, UUIDs, device IDs, your Wi-Fi password or complete protocol dumps. This issue is public.
+
+  - type: input
+    id: device
+    attributes:
+      label: Device
+      description: Brand, product name and, if you have one, the article number (e.g. Action 3225458).
+      placeholder: "LSC Smart Floor Lamp (Action 1234567)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Kind of device
+      options:
+        - Light / lamp / LED strip
+        - Plug / power strip
+        - Switch / dimmer / curtain
+        - Sensor / hub
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: chip
+    attributes:
+      label: Chip / platform
+      description: The platform you chose in the UnTuyaOS3 menu. If you opened the device, the module name (e.g. CB2S, WB3S) helps as well.
+      options:
+        - T1
+        - BK7231N
+        - RTL8720CF
+        - Not sure
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: module
+    attributes:
+      label: Module name or chip marking (optional)
+      placeholder: "CB2S, WB2L, T1-3S ..."
+
+  - type: input
+    id: original_firmware
+    attributes:
+      label: Original firmware version
+      description: Shown in the Smart Life / Tuya app under device settings → device information. The firmware version matters far more than the product name.
+      placeholder: "1.2.1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: result
+    attributes:
+      label: How far did you get?
+      options:
+        - Fully worked - new firmware runs and the device is usable
+        - Kickstart is running, device still needs its configuration
+        - OTA finished, but I could not verify the boot
+        - Exploit not accepted (device answered with another frame, e.g. 0x0C)
+        - Wi-Fi connection or DHCP failed before the exploit
+        - Transfer started but did not finish
+        - Device no longer works after flashing
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: milestones
+    attributes:
+      label: Milestones you saw
+      description: Each stage is separate. A finished transfer does not prove the device boots.
+      options:
+        - label: The device AP was found and joined
+        - label: DHCP worked
+        - label: Device info answered (0x16)
+        - label: Schema command acknowledged
+        - label: All firmware bytes were sent
+        - label: Device confirmed the OTA ("Reported OTA finished!")
+        - label: A Kickstart Wi-Fi network appeared afterwards
+        - label: Outputs (relay, LEDs ...) work after configuring the new firmware
+
+  - type: input
+    id: image
+    attributes:
+      label: Firmware image used
+      description: Bundled ESPHome Kickstart image, or the name of your own UG image.
+      placeholder: "Bundled T1 Kickstart"
+
+  - type: input
+    id: wifi_adapter
+    attributes:
+      label: Wi-Fi adapter
+      description: Filled in automatically when you open this form from the app's Web UI.
+      placeholder: "Atheros AR9271 (0cf3:9271), ath9k_htc, USB"
+    validations:
+      required: true
+
+  - type: input
+    id: haos_version
+    attributes:
+      label: Home Assistant OS version
+      placeholder: "17.1"
+
+  - type: input
+    id: host_kernel
+    attributes:
+      label: Host kernel
+      description: Filled in automatically from the app.
+      placeholder: "6.18.52-haos"
+
+  - type: input
+    id: app_version
+    attributes:
+      label: App version
+      description: Filled in automatically from the app.
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: upstream_revision
+    attributes:
+      label: UnTuyaOS3 revision
+      description: Filled in automatically from the app.
+      placeholder: "2111458"
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: What happened?
+      description: What you saw, what the device did afterwards and anything surprising. Short, cleaned-up log excerpts are welcome (the "Activity & diagnostics" panel).
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Before you submit
+      options:
+        - label: I removed keys, UUIDs, device IDs and passwords from everything I pasted.
+          required: true
+        - label: I understand this report is public and may be added to the compatibility list.
+          required: true

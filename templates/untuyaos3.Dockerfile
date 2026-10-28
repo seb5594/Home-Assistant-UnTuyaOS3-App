@@ -4,7 +4,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG UNTUYAOS3_COMMIT=@@UPSTREAM_REVISION@@
 RUN apk add --no-cache @@BUILD_PACKAGES@@
 RUN mkdir /upstream && curl --fail --location --retry 3 \
-    "https://codeload.github.com/tuya-cloudcutter/UnTuyaOS3/tar.gz/${UNTUYAOS3_COMMIT}" \
+    "https://codeload.github.com/@@UPSTREAM_REPOSITORY@@/tar.gz/${UNTUYAOS3_COMMIT}" \
     | tar -xz --strip-components=1 -C /upstream \
     && printf '%s\n' "$UNTUYAOS3_COMMIT" > /upstream/UPSTREAM_COMMIT
 RUN python -m venv /opt/venv && /opt/venv/bin/pip install --no-cache-dir @@PYTHON_PACKAGES@@

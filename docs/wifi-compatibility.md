@@ -1,49 +1,65 @@
-# Wi-Fi on Home Assistant OS
+# Wi-Fi adapters on Home Assistant OS
 
-The app uses the **host kernel's drivers and firmware**. Its Python image cannot add a missing host driver. Every wireless interface reported by `iw` is considered, independent of brand. Eligibility still requires an idle, unblocked, dedicated radio with managed and AP modes; the kernel must accept namespace reassignment. No vendor allowlist restricts flashing.
+The app uses whatever the host kernel brings along. It cannot add a driver or firmware that Home Assistant OS (HAOS) does not ship, because a container cannot extend the host kernel. Every interface that `iw` reports is looked at, whatever the brand. There is no vendor allowlist: an adapter qualifies when it is idle, not blocked, alone on its radio, supports `managed` and `AP` mode, and the kernel accepts moving it into another namespace.
 
-## Evidence levels
+The device's own access point is 2.4 GHz, so an adapter that cannot do 2.4 GHz is no use.
 
-| Adapter / driver | Evidence | Status |
+## What has actually been tested
+
+| Adapter | Driver | Evidence | Verdict |
+| --- | --- | --- | --- |
+| Atheros AR9271 / UB91, USB `0cf3:9271` | `ath9k_htc` | Successful flash of an LSC Smart Floor Lamp (T1); also associated and got DHCP with other devices. HAOS kernel 6.18.52-haos. | Works |
+| Internal Realtek RTL8822CE | `rtw88_8822ce` | Namespace handover, association and DHCP confirmed in several runs. Some attempts ended at about −95 dBm, never reaching DHCP. | Connects, flash not confirmed |
+
+Everything in the next section is **a candidate, not a result**. If you try one, please [tell me how it went](compatibility.md#add-your-device-or-adapter).
+
+## Drivers HAOS builds
+
+HAOS compiles Wi-Fi drivers as kernel modules from two configuration fragments. I read them on 28 October 2026 (kernel 6.18, `dev` branch of the HAOS repository):
+[USB/SDIO fragment](https://github.com/home-assistant/operating-system/blob/dev/buildroot-external/kernel/v6.18.y/device-support-wireless.config),
+[PCI(e) fragment](https://github.com/home-assistant/operating-system/blob/dev/buildroot-external/kernel/v6.18.y/device-support-wireless-pci.config).
+Which fragments a particular board uses is decided per board, so a driver listed here is not automatically present on *your* installation. The Web UI shows the modules that are really loaded on your host (**USB Wi-Fi diagnostics**).
+
+### USB and SDIO
+
+These are the interesting ones for a spare USB stick.
+
+| Family | Modules | Typical chips |
 | --- | --- | --- |
-| Atheros AR9271 / UB91, `0cf3:9271`, `ath9k_htc` | User-confirmed LSC Smart Floor Lamp / T1 flash; HAOS kernel 6.18.52-haos, app 0.2.0-beta.2 | Tested successfully in this setup |
-| Internal Realtek 8822CE, `rtw88_8822ce` | Namespace handover, association and DHCP confirmed in later user logs; some other attempts timed out at weak signal | Wi-Fi/DHCP confirmed; successful flash not confirmed |
-| Other adapters below | HAOS kernel configuration, not a hardware flash test | Candidates only; live checks remain required |
+| Atheros | `ath9k_htc`, `carl9170`, `ath6kl_usb`, `ath10k_usb` | AR9271 / AR7010 (`ath9k_htc`), AR9170 (`carl9170`) |
+| MediaTek | `mt7601u`, `mt76x0u`, `mt76x2u`, `mt7663u`, `mt7921u` | MT7601U, MT7610U, MT7612U, MT7921AU |
+| Ralink | `rt2500usb`, `rt73usb`, `rt2800usb` | RT2570, RT2571W, RT2870 / RT3070 / RT3572 / RT5370 |
+| Realtek | `rtl8xxxu`, `rtl8192cu`, `rtw88_8822bu`, `rtw88_8822cu`, `rtw88_8723du` | RTL8188CU / RTL8192CU / RTL8723AU and relatives, RTL8822BU, RTL8822CU, RTL8723DU |
+| Broadcom | `brcmfmac` (USB), `b43`, `brcmsmac` | rare as USB sticks |
+| Marvell | `mwifiex` (USB, SDIO) | rare as USB sticks |
 
-## Drivers configured by HAOS
+SDIO builds (`ath6kl_sdio`, `ath10k_sdio`, `mt7663s`, `mt7921s`, `mwifiex_sdio`, `rtw88_8822bs`, `rtw88_8822cs`, `rtw88_8723ds`, `rtw88_8821cs`, `rtl8723bs`) are for modules soldered onto boards.
 
-Reviewed on 27 October 2026 at HAOS source revision `87cca66d53485c3e2bc51e1dacc4e44be012edb1`. The [Linux 6.18 USB/SDIO configuration](https://github.com/home-assistant/operating-system/blob/87cca66d53485c3e2bc51e1dacc4e44be012edb1/buildroot-external/kernel/v6.18.y/device-support-wireless.config) enables these representative USB driver families:
+The RTL8821CU is deliberately *not* built in-tree by HAOS because of [a known problem](https://github.com/home-assistant/operating-system/issues/3205). Do not assume a Realtek stick works because another one does: the chip behind the same retail name changes between hardware revisions.
 
-| Family | Configured USB drivers / options |
-| --- | --- |
-| Atheros | `ATH9K_HTC`, `CARL9170`, `ATH6KL_USB`, `ATH10K_USB` |
-| MediaTek | `MT7601U`, `MT7663U`, `MT76x0U`, `MT76x2U`, `MT7921U` |
-| Ralink | `RT2500USB`, `RT73USB`, `RT2800USB` |
-| Realtek | `RTL8XXXU`, `RTL8192CU`, `RTW88_8822BU`, `RTW88_8822CU`, `RTW88_8723DU` |
-| Broadcom | `BRCMFMAC_USB` |
-| Marvell | `MWIFIEX_USB` |
+### PCI(e), usually the built-in Wi-Fi
 
-The separate [PCI configuration](https://github.com/home-assistant/operating-system/blob/87cca66d53485c3e2bc51e1dacc4e44be012edb1/buildroot-external/kernel/v6.18.y/device-support-wireless-pci.config) includes `RTW88_8822CE` and other internal drivers. It also contains some Realtek USB AU options, so board-specific fragment selection matters. HAOS notes a separate out-of-tree driver choice for 8821CU in the USB/SDIO fragment; do not infer its support from a single in-tree option.
+Atheros (`ath5k`, `ath9k`, `ath10k_pci`, `ath11k_pci`, `ath12k`), Intel (`iwlwifi` with `iwldvm` / `iwlmvm` / `iwlmld`, plus the legacy `iwl3945` / `iwl4965`), MediaTek (`mt7603e`, `mt7615e`, `mt7915e`, `mt7921e`, `mt7996e`, `mt76x0e`, `mt76x2e`), Realtek (`rtw88_*e`, `rtw89_*`, the older `rtl81xx` / `rtl8723` families), Broadcom (`brcmfmac` PCIe), Marvell (`mwifiex_pcie`, `mwl8k`) and Ralink (`rt2800pci`).
 
-These source options show what that HAOS configuration enables; they do **not** prove which modules are loaded on a particular installed release, whether firmware is present, or whether an adapter supports AP mode and namespace moves. Hardware revisions under the same retail name may use different chips. No additional adapter beyond the reported AR9271 has been physically validated here.
+Internal adapters are the least predictable candidates. Many are shared with HAOS's own management connection, and some vendors' drivers cannot move a radio between namespaces at all. The app refuses to touch an adapter that is in use, and it reports why.
 
-## Read your system through the Web UI
+### What the driver list cannot tell you
 
-Open **USB Wi-Fi diagnostics** after **Refresh adapters**. It displays the running kernel, loaded Wi-Fi-related modules visible in `/sys/module`, USB identity, bound USB-interface drivers and WLAN names. Module visibility alone is not a compatibility certificate. Discovery includes Ralink, MediaTek, Marvell, Broadcom, Realtek and Atheros driver families; it neither loads modules nor changes host firmware.
+- Whether the driver is loaded on *your* system, and whether its firmware file is present.
+- Whether the chip supports AP mode. Some drivers only do client mode. Those adapters are rejected with a clear message and nothing changes on your host.
+- Whether the kernel lets the radio move into another namespace. This is only known at the moment of the handover.
+- Whether reception is good enough. See below.
 
-An assigned USB radio intentionally disappears from the host's network namespace. The UI labels it **assigned to this app**, not missing firmware. The adapter returns automatically after a run; selection unlocks when the helper confirms restoration. If USB resets and the PHY number changes, recovery uses the saved MAC and device attributes. A stale rfkill entry belonging to another moved/unplugged radio is ignored; the selected radio must still have readable, explicitly unblocked rfkill state.
+## Reading the diagnostics in the Web UI
 
-If USB enumeration is visible but no WLAN interface exists, reconnect the adapter directly to a USB port and refresh. Inspect Home Assistant's host logs for firmware/driver errors and use its normal OS update UI. If the adapter is present but rejected, follow the rejection reason; do not disable protection mode or use Home Assistant's management Wi-Fi.
+Open **USB Wi-Fi diagnostics** after pressing **Refresh adapters**. It shows the running kernel, the loaded Wi-Fi related modules (from `/sys/module`), the USB identity, which driver is bound to each USB interface and the WLAN names. A module showing up there is not a compatibility certificate. Nothing is loaded and no firmware is changed by looking.
 
-## Interpreting the reported Realtek failure
+A USB radio that is currently assigned to the app disappears from the host on purpose. The UI then says *assigned to this app*, not *missing firmware*. It comes back by itself after the run. If a USB reset changes the PHY number, the helper recognises the same device again by its MAC address and device attributes.
 
-The supplied log records −95 dBm on the internal adapter versus −60 dBm on the successful AR9271. The Realtek stayed in authentication/scanning states and stopped at the bounded association deadline. DHCP was never started. Periodic `1/45`, `6/45`, `11/45` messages are status samples, not an endless DHCP loop.
+If the stick is listed on the USB bus but there is no WLAN interface, plug it directly into a USB port, refresh, look into the host logs for firmware or driver errors and update HAOS the normal way. If the adapter is present but rejected, follow the rejection reason. Never disable Protection mode and never use the Wi-Fi that Home Assistant itself connects through.
 
-The helper restored the internal radio's original state at 19:11:27 UTC. Later inventory still listed it, but an unrelated missing `rfkill3/name` prevented eligibility. Version 1.0.0-beta.1 corrects that discovery failure. This does not prove a fix for the Realtek's weak reception; check its antennas and hardware/driver behavior separately. Read-only sysctl and rfkill-control notices also appeared in the successful USB run, so those notices alone do not explain the Realtek failure.
+## When the signal is the problem
 
+One log from the internal Realtek showed −95 dBm against −60 dBm on the AR9271 in the same spot. The Realtek stayed in authentication and scanning states until the association deadline, and DHCP never started. Lines such as `1/45`, `6/45`, `11/45` are status samples of that wait, not an endless DHCP loop.
 
-## Later device-protocol results
-
-On 28 October 2026, user logs showed successful Wi-Fi association and DHCP with both the internal Realtek and the AR9271 for a 2024 Battletron Lightbar. The device answered request `0x16` with `0x0C`; this is not a successful UnTuyaOS3 device-info exchange, and firmware compatibility is unconfirmed.
-
-A 2024 BK7231N LSC Powerstrip without energy monitoring offered `192.168.175.100/24` from `192.168.175.1`. This was incorrectly rejected by the app's old fixed `.176.1` assumption. Version 1.0.0-beta.3 validates and uses the DHCP-derived endpoint instead. This fixes that app-side networking restriction; a successful powerstrip flash has not been confirmed. The firmware version, rather than year or chip alone, is needed to investigate exploit support.
+That is a reception problem, not an app problem, and no software retry changes it. Move the device closer, use an adapter with an external antenna or try a different one.

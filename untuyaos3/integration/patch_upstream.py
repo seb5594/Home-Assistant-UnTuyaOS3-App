@@ -1,4 +1,15 @@
-"""Reviewed adaptations to the pinned upstream. Fail when context drifts."""
+"""Reviewed adaptations to the pinned upstream UnTuyaOS3 scripts.
+
+The upstream project is used unmodified except for the changes below. Each change replaces
+one exact snippet and the build fails if a snippet is missing or ambiguous, so a new
+upstream revision can never be patched "almost right" by accident. Review these patches
+(and the privilege assumptions behind them) whenever the pinned revision moves.
+
+scripts/connect.sh  - stay on the leased adapter, bound the AP scan, verify the association
+                      before DHCP and let our hook (dhcp.py) configure the address.
+scripts/ap-ota.py   - connect only to the DHCP-derived target through the leased adapter,
+                      stop at unexpected protocol frames and report an honest exit code.
+"""
 from pathlib import Path
 import sys
 
@@ -6,6 +17,7 @@ import sys
 def patch(root):
     connect = root / "scripts/connect.sh"
     text = connect.read_text()
+    # Wi-Fi: bounded scan, no rfkill changes, our DHCP hook, verified association.
     changes = {
         '    while :; do':
             '    local __untuya_scan_deadline=$((SECONDS + 90))\n'
@@ -32,6 +44,7 @@ def patch(root):
     connect.write_text(text)
     ota = root / "scripts/ap-ota.py"
     text = ota.read_text()
+    # OTA part 1: where to connect. The target comes from the session record, never a constant.
     changes = {
         'VICTIM_IP = "192.168.176.1"':
             'sys.path.insert(0, "/opt/webapp")\n'
@@ -47,8 +60,11 @@ def patch(root):
             '            print(f"Connecting to validated device target {target}:6668 via {interface}")\n'
             '            sock.connect((target, 6668))',
     }
+    # OTA part 2: explain unexpected protocol frames instead of failing an assertion.
     for expected in ("FRM_AP_CFG_GET_DEV_INFO", "FRM_AP_CFG_SET_DEV_SCHEMA", "FRM_SECURITY_TYPE4"):
         changes[f"assert frame.type == {expected}"] = f"expect_frame_type(frame, {expected})"
+    # OTA part 3: honest results. Track the bytes really sent and return distinct exit codes
+    # (0 confirmed, 3 sent but unconfirmed, 1/2 failed) instead of always exiting with 0.
     changes.update({
         '        result = int.from_bytes(frame.data[0:4], "little")':
             '        result = int.from_bytes(frame.data[0:4], "little")\n'

@@ -1,4 +1,9 @@
-"""Read-only discovery; host ownership checks run only in the temporary provisioner."""
+# Copy of shared/wifi.py, maintained by tools/sync_project.py. Edit the original.
+"""Wi-Fi inspection helpers shared by both apps.
+
+Discovery here only reads state (``iw``, ``ip``, sysfs, NetworkManager over busctl). The
+only mutating function is :func:`cleanup`, which resets the one leased interface.
+"""
 import json
 import os
 import re
@@ -10,10 +15,11 @@ NM = "org.freedesktop.NetworkManager"
 
 
 class PreflightError(RuntimeError):
-    pass
+    """A safety check failed; nothing was changed on the host."""
 
 
 def command(*args):
+    """Run a fixed argument list (never a shell) with a timeout and return its stdout."""
     try:
         result = subprocess.run(args, text=True, capture_output=True, timeout=8,
                                 env={**os.environ, "LC_ALL": "C"})
@@ -26,6 +32,7 @@ def command(*args):
 
 
 def parse_interfaces(output):
+    """Turn ``iw dev`` output into [{"name", "phy", "type"}, ...]; reject suspicious names."""
     result, phy, current = [], None, None
     for line in output.splitlines():
         match = re.fullmatch(r"phy#(\d+)", line.strip())
@@ -43,6 +50,7 @@ def parse_interfaces(output):
 
 
 def supported_modes(output):
+    """Interface modes (managed, AP, ...) advertised by ``iw phy <phy> info``."""
     match = re.search(r"Supported interface modes:\n((?:[ \t]+\*[^\n]*\n?)+)", output)
     return {s.strip() for s in re.findall(r"\*\s+([^\n]+)", match[1])} if match else set()
 
@@ -83,6 +91,7 @@ def bus(*args):
 
 
 def nm_unmanaged(name):
+    """Require NetworkManager to have released the device (unmanaged and idle)."""
     path = bus("call", NM, "/org/freedesktop/NetworkManager", NM, "GetDeviceByIpIface", "s", name)
     iface = NM + ".Device"
     managed = bus("get-property", NM, path, iface, "Managed")
@@ -95,6 +104,7 @@ def nm_unmanaged(name):
 
 
 def radio_unblocked(phy, root=Path("/sys/class/rfkill")):
+    """Fail unless the radio's rfkill entry exists and is neither soft- nor hard-blocked."""
     entries = []
     for entry in root.glob("rfkill*"):
         try:
@@ -118,6 +128,7 @@ def radio_unblocked(phy, root=Path("/sys/class/rfkill")):
 
 @dataclass
 class Adapter:
+    """Identity of the leased radio. The ifindex lets us notice a replaced device."""
     name: str
     phy: str
     ifindex: int
@@ -127,6 +138,11 @@ class Adapter:
 
 
 def inspect(candidate, all_interfaces, run=command, ownership=None, rfkill=None, allow_up=False):
+    """Decide whether an interface is idle and dedicated enough to be handed to the app.
+
+    Raises :class:`PreflightError` with a human-readable reason otherwise. The reasons are
+    shown verbatim in the Web UI, so keep them understandable for non-developers.
+    """
     name, phy = candidate["name"], candidate["phy"]
     if sum(i["phy"] == phy for i in all_interfaces) != 1:
         raise PreflightError(f"{name}: shared radio {phy}; other virtual interfaces exist")
@@ -155,6 +171,7 @@ def inspect(candidate, all_interfaces, run=command, ownership=None, rfkill=None,
 
 
 def discover(requested, log, host=False):
+    """Pick the first eligible interface (``requested`` = a name, or "auto") and log why others fail."""
     interfaces = parse_interfaces(command("iw", "dev"))
     if not interfaces:
         raise PreflightError("No assigned wireless interface visible. Start the Wi-Fi Helper first and inspect both apps' Home Assistant Log tabs.")
@@ -181,6 +198,7 @@ def discover(requested, log, host=False):
 
 
 def same_device(adapter):
+    """Guard against USB resets or re-plugs: the interface must still be the very same device."""
     interfaces = parse_interfaces(command("iw", "dev"))
     info = json.loads(command("ip", "-j", "link", "show", "dev", adapter.name))
     if not any(i["name"] == adapter.name and i["phy"] == adapter.phy for i in interfaces) or not info or info[0]["ifindex"] != adapter.ifindex:
@@ -188,6 +206,7 @@ def same_device(adapter):
 
 
 def cleanup(adapter, log):
+    """Disconnect the leased interface, flush its addresses and routes, then verify the result."""
     try:
         same_device(adapter)
     except (PreflightError, OSError, ValueError, KeyError) as exc:

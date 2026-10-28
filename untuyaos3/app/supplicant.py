@@ -12,6 +12,7 @@ from wifi import command, same_device
 
 
 class Control:
+    """Client for wpa_supplicant's control socket (one request, one reply)."""
     def __init__(self, path):
         self.directory = tempfile.TemporaryDirectory(prefix="client-", dir=Path(path).parent)
         self.socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
@@ -28,6 +29,7 @@ class Control:
         return self.socket.recv(65536).decode("utf-8", "replace").strip()
 
     def close(self):
+        """Close the socket and remove its private client directory."""
         self.socket.close()
         self.directory.cleanup()
 
@@ -39,6 +41,7 @@ class Control:
 
 
 class Supplicant:
+    """One foreground wpa_supplicant bound to the leased adapter, with power-saving handled safely."""
     def __init__(self, adapter, original_power_save, log, cancelled):
         self.adapter, self.original_power_save = adapter, original_power_save
         self.log, self.cancelled = log, cancelled
@@ -46,6 +49,7 @@ class Supplicant:
         self.power_changed = False
 
     def start(self):
+        """Bring the interface up, launch wpa_supplicant and wait for its control socket. Returns the socket path."""
         same_device(self.adapter)
         command("ip", "link", "set", "dev", self.adapter.name, "up")
         if self.original_power_save == "on":
@@ -85,6 +89,7 @@ class Supplicant:
             self.log("info", line.rstrip(), "wifi")
 
     def close(self):
+        """Stop the supplicant, remove its files and restore the original power-saving state."""
         try:
             if self.process:
                 try:

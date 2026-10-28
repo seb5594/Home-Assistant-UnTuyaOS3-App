@@ -3,12 +3,22 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="csrf" content="__CSRF__">
+<meta name="report-url" content="__REPORT_URL__">
 <title>UnTuyaOS3</title><link rel="stylesheet" href="style.css"><script src="app.js" defer></script>
 </head>
 <body>
 <header><div><span class="eyebrow">HOME ASSISTANT · DEVICE TOOLS</span><h1>UnTuyaOS3<span class="version">__VERSION__</span></h1>
-<p>Give compatible Tuya devices a new beginning.</p></div><span id="state" class="badge">Connecting…</span></header>
+<p>Give compatible Tuya devices a new beginning.</p>
+<p class="credit">Built on <a href="__UPSTREAM_URL__" target="_blank" rel="noopener noreferrer">UnTuyaOS3</a> by the tuya-cloudcutter project. Without their work none of this would exist.</p></div><span id="state" class="badge">Connecting…</span></header>
 <main>
+<section id="helper-card" class="card helper-card"><div class="section-heading"><div><span class="eyebrow">WI-FI HELPER</span><h2 id="helper-title">Looking for the helper…</h2></div>
+<span id="helper-pill" class="badge">checking</span></div>
+<div id="helper-body" class="helper-body"><p id="helper-message">Looking for the Wi-Fi Helper…</p>
+<div class="helper-actions"><a id="helper-open" class="button secondary" href="__HELPER_URL__" target="_blank" rel="noopener noreferrer">Open helper app</a>
+<button id="secret-generate" class="secondary" type="button">Generate pairing secret</button></div>
+<div id="secret-box" class="secret-box" hidden><code id="secret-value"></code><button id="secret-copy" class="secondary" type="button">Copy</button>
+<p class="hint">Paste this exact value into the Configuration tab of <strong>both</strong> apps, save, then restart them. It is only shown here and never stored.</p></div>
+<ol id="helper-steps" class="steps"><li>Install <strong>UnTuyaOS3 Wi-Fi Helper</strong> from the same repository.</li><li>Use the same pairing secret in both apps.</li><li>Start the helper. This page notices it within a few seconds.</li></ol></div></section>
 <section class="card adapter-card"><div class="section-heading"><div><span class="eyebrow">1 · CHOOSE YOUR RADIO</span><h2>Wi-Fi adapters</h2></div>
 <button id="refresh-adapters" class="secondary">Refresh adapters</button></div>
 <div class="adapter-settings"><label for="adapter-select">Dedicated Wi-Fi adapter</label><select id="adapter-select" disabled><option value="">Discovering adapters…</option></select>
@@ -36,6 +46,12 @@
 <form id="firmware-form"><label>Platform<select id="platform"><option>T1</option><option>BK7231N</option><option>RTL8720CF</option></select></label>
 <label>UG firmware (.bin)<input id="firmware" type="file" accept=".bin" required></label><button id="upload" class="secondary">Upload firmware</button></form>
 <p id="library" class="hint"></p></section>
+<section class="card report-card"><div><span class="eyebrow">HELP THE COMMUNITY</span><h2>Tried a device? Tell us how it went</h2>
+<p>Every report, successful or not, helps others decide what is worth trying. The form opens on GitHub with your app version and Wi-Fi adapter already filled in. Please leave out keys, UUIDs and full logs.</p></div>
+<a id="report" class="button secondary" href="__REPORT_URL__" target="_blank" rel="noopener noreferrer">Report a device</a></section>
 <p class="caution">Flashing replaces device firmware and may make a device unusable. Use a compatible device and the correct UG image. Put the device into AP pairing mode before starting. Keep power connected during flashing.</p>
-</main><footer>Isolated radio · Home Assistant Ingress · Full verbose output</footer>
+</main><footer>Isolated radio · Home Assistant Ingress · Full verbose output<br>
+Powered by <a href="__UPSTREAM_URL__" target="_blank" rel="noopener noreferrer">UnTuyaOS3</a> (revision <a href="__UPSTREAM_COMMIT_URL__" target="_blank" rel="noopener noreferrer">__UPSTREAM_REVISION__</a>), exploit research by
+<a href="https://github.com/kuba2k2" target="_blank" rel="noopener noreferrer">kuba2k2</a> and <a href="https://github.com/libretiny-eu/libretiny" target="_blank" rel="noopener noreferrer">LibreTiny</a>.
+Not affiliated with Tuya. This app: <a href="__REPOSITORY_URL__" target="_blank" rel="noopener noreferrer">GitHub</a></footer>
 </body></html>
