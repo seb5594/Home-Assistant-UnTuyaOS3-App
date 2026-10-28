@@ -39,7 +39,7 @@ class Runner:
 
     def start(self):
         with self.lock:
-            if self.state not in ("ready", "finished", "cancelled", "failed") or self.fatal.is_set():
+            if self.state not in ("ready", "finished", "unconfirmed", "cancelled", "failed") or self.fatal.is_set():
                 raise ValueError("A run is already active or the app is shutting down")
             try:
                 current = discover(self.options["interface"], self.journal.emit)
@@ -145,9 +145,9 @@ class Runner:
             tail = decoder.decode(b"", final=True)
             if tail:
                 self.journal.emit("info", tail, "terminal")
-            outcome = "cancelled" if self.cancelled.is_set() else ("finished" if self.exit_code == 0 else "failed")
+            outcome = "cancelled" if self.cancelled.is_set() else ({0: "finished", 3: "unconfirmed"}.get(self.exit_code, "failed"))
             self.state = "cleaning"
-            self.journal.emit("info" if self.exit_code == 0 else "error",
+            self.journal.emit("warning" if outcome == "unconfirmed" else "info" if self.exit_code == 0 else "error",
                               f"UnTuyaOS3 exited with status {self.exit_code}; result={outcome}")
         except Exception as exc:
             outcome = "failed"

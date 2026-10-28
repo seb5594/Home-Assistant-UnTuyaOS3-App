@@ -35,7 +35,8 @@ def patch(root):
     changes = {
         'VICTIM_IP = "192.168.176.1"':
             'sys.path.insert(0, "/opt/webapp")\n'
-            'from ota_target import load_target, expect_frame_type',
+            'from ota_target import load_target, expect_frame_type\n'
+            'from ota_progress import TransferProgress',
         '    for attempt in range(1, SOCKET_RETRIES + 1):\n        sock = socket.socket':
             '    target = load_target()\n'
             '    for attempt in range(1, SOCKET_RETRIES + 1):\n        sock = socket.socket',
@@ -48,6 +49,61 @@ def patch(root):
     }
     for expected in ("FRM_AP_CFG_GET_DEV_INFO", "FRM_AP_CFG_SET_DEV_SCHEMA", "FRM_SECURITY_TYPE4"):
         changes[f"assert frame.type == {expected}"] = f"expect_frame_type(frame, {expected})"
+    changes.update({
+        '        result = int.from_bytes(frame.data[0:4], "little")':
+            '        result = int.from_bytes(frame.data[0:4], "little")\n'
+            '        frame.result = result',
+        '        return\n    VERBOSE =': '        return 2\n    VERBOSE =',
+        '        print("Upgrade path is not a file")\n        return':
+            '        print("Upgrade path is not a file")\n        return 1',
+        '            return\n\n        # FRM_AP_CFG_GET_DEV_INFO':
+            '            return 1\n\n        # FRM_AP_CFG_GET_DEV_INFO',
+        '        return\n\n    # FRM_SECURITY_TYPE3':
+            '        return 1\n\n    # FRM_SECURITY_TYPE3',
+        '    ota_send_complete = False':
+            '    transfer = TransferProgress(total)\n    ota_result = 3',
+        '        except socket.timeout:\n'
+        '            if ota_send_complete is False:\n'
+        '                print("Socket timed out while attempting OTA.  Please try again.")\n'
+        '                return\n'
+        '            else:\n'
+        '                print("\\nOTA upload completed, but we didn\'t get a final confirmation packet.  Check to see if your device rebooted to custom firmware, otherwise try again.")\n'
+        '                break\n'
+        '        if not msg:\n'
+        '            break':
+            '        except socket.timeout:\n'
+            '            ota_result = transfer.incomplete_result()\n'
+            '            break\n'
+            '        if not msg:\n'
+            '            ota_result = transfer.incomplete_result()\n'
+            '            break',
+        '            print("Reported OTA finished!")\n            break':
+            '            if transfer.complete and frame.result == 0:\n'
+            '                print("Reported OTA finished!")\n'
+            '                ota_result = 0\n'
+            '            else:\n'
+            '                print("Device OTA finish response did not confirm a complete successful transfer.")\n'
+            '                ota_result = 1\n'
+            '            break',
+        '            if offset + length >= total:\n                ota_send_complete = True\n': '',
+        '        f.seek(offset, SEEK_SET)':
+            '        if offset < 0 or length <= 0 or offset >= total:\n'
+            '            raise RuntimeError("Device requested an invalid firmware byte range")\n'
+            '        f.seek(offset, SEEK_SET)',
+        '        sock.sendall(frame.encrypt_and_pack(session_key))':
+            '        sock.sendall(frame.encrypt_and_pack(session_key))\n'
+            '        transfer.record(offset, len(chunk))',
+        '    sock.shutdown(socket.SHUT_RDWR)\n    sock.close()\n\n\nif __name__':
+            '    try:\n'
+            '        sock.shutdown(socket.SHUT_RDWR)\n'
+            '    except OSError:\n'
+            '        pass\n'
+            '    finally:\n'
+            '        sock.close()\n'
+            '    return ota_result\n\n\nif __name__',
+        'if __name__ == "__main__":\n    main()':
+            'if __name__ == "__main__":\n    raise SystemExit(main())',
+    })
     for old, new in changes.items():
         if text.count(old) != 1:
             raise RuntimeError(f"Upstream OTA context changed: {old}")

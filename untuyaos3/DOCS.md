@@ -15,3 +15,5 @@ After each completed, failed or cancelled session, the radio is returned and the
 DHCP-derived OTA targets support device subnets such as `192.168.175.x` and `192.168.176.x`. The endpoint must be on-link and reachable directly through the selected Wi-Fi adapter; DNS/default routes remain ignored. Session target files are removed after every run, and cleanup verifies the absence of IPv4/IPv6 addresses and dependent routes.
 
 An unexpected protocol response such as `0x0C` instead of `0x16` is a separate compatibility/pairing issue. Wi-Fi and DHCP may succeed while the device firmware does not provide the expected UnTuyaOS3 exchange. No later stage is attempted after that mismatch.
+
+**Unconfirmed** means all image bytes were transmitted but the device did not acknowledge completion. Check for Kickstart Wi-Fi before retrying. Kickstart is a generic setup firmware; a dark lamp can still be booting normally without its device-specific output configuration. Flashing can permanently brick hardware: use this experimental app entirely at your own risk.

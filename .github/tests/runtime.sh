@@ -59,6 +59,49 @@ with tempfile.TemporaryDirectory() as directory:
             raise AssertionError('Unexpected AP frame must stop before schema or OTA commands')
     assert peer.sendall.call_count == 1
 print('PASS: patched OTA uses validated .175 endpoint and stops on unexpected AP response')
+import contextlib
+import io
+import hmac
+from hashlib import sha256
+from types import SimpleNamespace
+
+with tempfile.TemporaryDirectory() as directory:
+    firmware = Path(directory) / 'test.bin'
+    firmware.write_bytes(b'MMM\0test')
+    uuid = '0123456789abcdef'
+    security = b'fedcba9876543210' + hmac.new(uuid.encode(), b'0123456789abcdef', sha256).digest()
+    for verbose in (False, True):
+        for ending, full, expected in (('finish', True, 0), ('timeout', True, 3), ('eof', True, 3),
+                                        ('timeout', False, 1), ('finish', False, 1), ('finish-error', True, 1)):
+            frames = [SimpleNamespace(type=0x16, data=b'{"uuid":"0123456789abcdef"}'),
+                      SimpleNamespace(type=0x17, data=b'{}'), SimpleNamespace(type=0x04, data=security),
+                      SimpleNamespace(type=0x1B, sequence=1,
+                                      data=b'{"file_offset":"0","data_block_len":"' + (b'8' if full else b'4') + b'"}')]
+            if ending in ('finish', 'finish-error'):
+                frames.append(SimpleNamespace(type=0x1C, data=b'', result=1 if ending == 'finish-error' else 0))
+            reads = iter([b'frame'] * len(frames))
+            def receive(_size):
+                try:
+                    return next(reads)
+                except StopIteration:
+                    if ending == 'timeout':
+                        raise ota.socket.timeout()
+                    return b''
+            peer = Mock()
+            peer.recv.side_effect = receive
+            arguments = ['ap-ota.py', str(firmware)] + (['-v'] if verbose else [])
+            with contextlib.redirect_stdout(io.StringIO()) as output, patch.object(sys, 'argv', arguments), \
+                 patch.object(ota, 'get_socket', return_value=peer), patch.object(ota, 'sleep'), \
+                 patch.object(ota.Lpv35Frame, 'unpack_and_decrypt', side_effect=frames):
+                result = ota.main()
+            assert result == expected, (verbose, ending, full, result, output.getvalue())
+            assert ('Reported OTA finished!' in output.getvalue()) == (expected == 0)
+            if expected == 3:
+                assert 'not confirmed' in output.getvalue()
+        with contextlib.redirect_stdout(io.StringIO()), patch.object(sys, 'argv', ['ap-ota.py', str(firmware)]), \
+             patch.object(ota, 'get_socket', side_effect=ConnectionError('TCP refused')):
+            assert ota.main() == 1, 'Connection failure must not be reported as success'
+print('PASS: actual OTA main distinguishes confirmation, full-transfer timeout, EOF, partial transfer and connection failure in both log modes')
 CHECK_TARGET
     python - <<'CHECK_ASSOCIATION'
 import os

@@ -11,13 +11,14 @@
   <a href="https://paypal.me/seb5594"><img src="https://img.shields.io/static/v1?label=Support&amp;message=PayPal&amp;color=0070BA&amp;logo=paypal&amp;logoColor=white&amp;style=for-the-badge" alt="PayPal" height="40"></a>
   <a href="https://buymeacoffee.com/seb5594"><img src="https://img.shields.io/static/v1?label=Support&amp;message=Buy%20Me%20a%20Coffee&amp;color=FFDD00&amp;logo=buy-me-a-coffee&amp;logoColor=black&amp;style=for-the-badge" alt="Buy Me a Coffee" height="40"></a><br>
   <a href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fseb5594%2FHome-Assistant-Apps"><img src="https://img.shields.io/static/v1?label=Home%20Assistant&amp;message=Add%20app%20repository&amp;color=18BCF2&amp;logo=homeassistant&amp;logoColor=white&amp;style=for-the-badge" alt="Home Assistant" height="28"></a>
-  <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/releases/tag/v1.0.0-beta.3"><img src="https://img.shields.io/static/v1?label=version&amp;message=Beta%203&amp;color=1877A5&amp;style=for-the-badge" alt="version" height="28"></a>
+  <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/releases"><img src="https://img.shields.io/static/v1?label=version&amp;message=Beta%204&amp;color=1877A5&amp;style=for-the-badge" alt="version" height="28"></a>
   <img src="https://img.shields.io/static/v1?label=image%20pulls&amp;message=45&amp;color=1877A5&amp;style=for-the-badge" alt="image pulls" height="28"><br>
   <img src="https://img.shields.io/static/v1?label=arch%20%26%20size&amp;message=amd64%20151.2%20%C2%B7%20aarch64%20165.6%20MiB&amp;color=157F71&amp;style=flat" alt="arch &amp; size" height="20">
   <img src="https://img.shields.io/static/v1?label=stage&amp;message=experimental&amp;color=2F855A&amp;style=flat" alt="stage" height="20">
   <img src="https://img.shields.io/static/v1?label=ingress&amp;message=enabled&amp;color=7C3AED&amp;style=flat" alt="ingress" height="20">
   <img src="https://img.shields.io/static/v1?label=mounts%20%28read-write%29&amp;message=share&amp;color=B45309&amp;style=flat" alt="mounts (read-write)" height="20">
   <img src="https://img.shields.io/static/v1?label=privileged&amp;message=NET_ADMIN%2C%20NET_RAW&amp;color=B45309&amp;style=flat" alt="privileged" height="20"><br>
+  <a href="https://github.com/seb5594/Home-Assistant-Apps/stargazers"><img src="https://img.shields.io/github/stars/seb5594/Home-Assistant-UnTuyaOS3-App?label=stars&amp;style=flat" alt="stars" height="20"></a>
   <a href="https://github.com/seb5594/Home-Assistant-Apps/issues"><img src="https://img.shields.io/github/issues/seb5594/Home-Assistant-UnTuyaOS3-App?label=issues&amp;style=flat" alt="issues" height="20"></a>
   <img src="https://img.shields.io/static/v1?label=runtime%20tests&amp;message=5%20passed&amp;color=2F855A&amp;style=flat" alt="runtime tests" height="20">
   <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/seb5594/Home-Assistant-UnTuyaOS3-App/ci.yml?branch=dev&amp;label=checks&amp;style=flat" alt="checks" height="20"></a>
@@ -32,11 +33,13 @@
 >
 > **You are responsible for choosing to use this app/tool, verifying hardware and firmware compatibility, and accepting the risk of device loss and recovery costs. Do not use it on a device you cannot afford to lose.** There is no guarantee of a successful flash or recovery. The software is provided under the MIT License, without warranty, subject to applicable law.
 >
-> **A user has reported an LSC Smart Connect decorative table lamp (Action article 3225458) that stopped lighting after an OTA attempt. Its final OTA confirmation was not received; successful boot and recovery have not been established. Treat this model as unverified and this report as a serious failure report.**
+> **An LSC Smart Connect decorative table lamp (Action article 3225458) stopped lighting after an OTA attempt without final device confirmation. The user subsequently found a Kickstart Wi-Fi network: the firmware was booting, but normal lamp operation was not configured or verified. This is not a confirmed permanent brick. It demonstrates why missing light output, a timeout or a completed transfer alone cannot establish the device's actual state. Treat this model as unverified.**
 
 An interactive Home Assistant app for [UnTuyaOS3](https://github.com/tuya-cloudcutter/UnTuyaOS3), with an Ingress console, verbose live logs, firmware uploads and a dedicated Wi-Fi radio.
 
 **Experimental.** Supports amd64 and aarch64 Home Assistant OS hosts. Integrated and USB Wi-Fi require a working host driver, AP mode and network-namespace reassignment. Hardware/Supervisor validation is still required.
+
+See the [table lamp incident analysis](docs/table-lamp-3225458.md): the full image was transmitted without final OTA confirmation, and the user subsequently detected Kickstart Wi-Fi. A dark lamp may still be running setup firmware; inspect its state before retrying.
 
 ## Confirmed user result
 
@@ -129,6 +132,8 @@ The initial device-AP scan now has a **90-second deadline**. If no matching open
 ## Logs and recovery
 
 Cleanup terminates the session processes and private supplicant, restores power saving, and removes only the selected adapter's IPv4/IPv6 addresses and dependent routes. It verifies that the adapter is down and disconnected, with no retained addresses/routes, before completing the cleanup phase. Session files, including the DHCP-derived OTA target, are removed on success, cancellation and failure. A later session receives a new private directory and identity; an old DHCP target cannot be reused.
+
+The **unconfirmed** status means all firmware bytes were sent but the device did not confirm OTA completion. Check for Kickstart Wi-Fi and verify the device before considering another flash. A confirmed OTA result also does not establish that device outputs are configured correctly or that the device booted.
 
 The console shows live PTY output. The separate activity panel includes timestamped diagnostics, driver events and all script output. Ten-second heartbeats indicate that the script is waiting for input, an AP or protocol output.
 

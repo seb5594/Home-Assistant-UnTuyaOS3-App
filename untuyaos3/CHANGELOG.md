@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.0-beta.4
+
+- Add a prominent README danger warning about bricking, lack of warranty and user responsibility.
+- Document the table lamp report accurately: full transmission without final confirmation, followed by user-observed Kickstart Wi-Fi.
+- Fix verbose OTA result tracking; distinguish device-confirmed completion, unconfirmed full transmission, partial transfer and connection failure.
+- Propagate OTA failure and unconfirmed exit codes instead of reporting successful completion on error paths.
+- Render verbose log batches once per output panel to avoid per-event DOM replacement and scrolling.
+- Add coverage for the reported image size, partial/repeated byte ranges, both verbosity modes and a 4,000-event UI batch.
+
 ## 1.0.0-beta.3
 
 - Accept validated private DHCP subnets such as 192.168.175.0/24 and use their server/router as the OTA endpoint.

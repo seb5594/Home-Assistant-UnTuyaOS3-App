@@ -46,7 +46,7 @@ class Devices:
                 if self.selected is None and len(eligible) == 1:
                     self.selected = eligible[0]
                     self.journal.emit("info", f"Only one eligible Wi-Fi adapter: {self.selected} selected automatically")
-                if self.runner.state not in ("running", "assigning", "cleaning", "releasing"):
+                if self.runner.state in ("starting", "select_adapter", "ready"):
                     self.runner.state = "ready" if self.selected else "select_adapter"
                 if not eligible and not self.error:
                     self.error = "No free AP-capable adapter is ready. Review adapter and USB diagnostics, then refresh"

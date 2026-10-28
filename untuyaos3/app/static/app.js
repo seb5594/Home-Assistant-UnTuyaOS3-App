@@ -23,7 +23,7 @@ function controls(state, data = {}) {
   running = state === "running";
   $("state").textContent = state;
   $("state").className = "badge " + state;
-  $("start").disabled = !["ready", "finished", "cancelled", "failed"].includes(state) || Boolean(data.adapter_busy || data.recovery_pending) || !(data.selected_adapter || data.adapter);
+  $("start").disabled = !["ready", "finished", "unconfirmed", "cancelled", "failed"].includes(state) || Boolean(data.adapter_busy || data.recovery_pending) || !(data.selected_adapter || data.adapter);
   for (const id of ["choice", "send", "cancel"]) $(id).disabled = !running;
   $("upload").disabled = running;
   $("refresh-adapters").disabled = Boolean(data.adapter_busy) || state === "offline";
@@ -85,11 +85,16 @@ async function poll() {
       $("logs").textContent = "";
       logGeneration = data.generation;
     }
-    if (data.gap) append($("logs"), "\n[History truncated. Download the persistent logs for earlier output.]\n", logLimit);
+    // Aggregate a whole poll before touching the DOM. Verbose OTA can produce
+    // thousands of events; rewriting and scrolling per event stalls the page.
+    const terminalParts = [], logParts = [];
+    if (data.gap) logParts.push("\n[History truncated. Download the persistent logs for earlier output.]\n");
     for (const event of data.events) {
-      if (event.channel === "terminal") append($("terminal"), event.text, terminalLimit);
-      append($("logs"), "[" + event.time + "] " + event.level.toUpperCase() + " · " + event.channel + "\n" + event.text + "\n", logLimit);
+      if (event.channel === "terminal") terminalParts.push(event.text);
+      logParts.push("[" + event.time + "] " + event.level.toUpperCase() + " · " + event.channel + "\n" + event.text + "\n");
     }
+    if (terminalParts.length) append($("terminal"), terminalParts.join(""), terminalLimit);
+    if (logParts.length) append($("logs"), logParts.join(""), logLimit);
     cursor = data.cursor;
     if (lastState !== data.state) {
       notice({ready: "Ready. Start a session, then answer the script's numbered prompts.",
@@ -98,6 +103,7 @@ async function poll() {
         releasing: "Returning the adapter and restoring its original host settings…",
         running: "Session active. Follow the console; submit a menu choice when prompted.",
         finished: "Script finished with exit code " + data.exit_code + ". Review the console and verify your device.",
+        unconfirmed: "All firmware bytes were sent, but the device did not confirm completion. Check for Kickstart Wi-Fi and verify the device before attempting another flash.",
         cancelled: "Session stopped. Review the logs before trying again.",
         failed: "Session failed (exit " + data.exit_code + "). Review the diagnostics."}[data.state] || data.state,
         data.state === "failed");
