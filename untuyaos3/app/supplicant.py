@@ -42,11 +42,12 @@ class Control:
 
 class Supplicant:
     """One foreground wpa_supplicant bound to the leased adapter, with power-saving handled safely."""
-    def __init__(self, adapter, original_power_save, log, cancelled):
+    def __init__(self, adapter, original_power_save, log, cancelled, new_session=True):
         self.adapter, self.original_power_save = adapter, original_power_save
         self.log, self.cancelled = log, cancelled
         self.directory = self.process = self.reader = None
         self.power_changed = False
+        self.new_session = new_session
 
     def start(self):
         """Bring the interface up, launch wpa_supplicant and wait for its control socket. Returns the socket path."""
@@ -68,7 +69,7 @@ class Supplicant:
         self.process = subprocess.Popen(
             ["wpa_supplicant", "-Dnl80211", "-i", self.adapter.name, "-c", str(config), "-t"],
             stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            text=True, encoding="utf-8", errors="replace", start_new_session=True, close_fds=True)
+            text=True, encoding="utf-8", errors="replace", start_new_session=self.new_session, close_fds=True)
         self.reader = threading.Thread(target=self._read, daemon=True)
         self.reader.start()
         for _ in range(50):
@@ -93,13 +94,19 @@ class Supplicant:
         try:
             if self.process:
                 try:
-                    os.killpg(self.process.pid, signal.SIGTERM)
+                    if self.new_session:
+                        os.killpg(self.process.pid, signal.SIGTERM)
+                    else:
+                        self.process.terminate()
                 except ProcessLookupError:
                     pass
                 try:
                     self.process.wait(timeout=3)
                 except subprocess.TimeoutExpired:
-                    os.killpg(self.process.pid, signal.SIGKILL)
+                    if self.new_session:
+                        os.killpg(self.process.pid, signal.SIGKILL)
+                    else:
+                        self.process.kill()
                     self.process.wait(timeout=3)
                 if self.reader:
                     self.reader.join(timeout=2)

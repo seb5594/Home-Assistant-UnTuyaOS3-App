@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.0-beta.1
+
+- Bundle the existing helper with Tuya Breaker as well as UnTuyaOS3. Both clients use the same authenticated protocol and the helper still permits only one active radio lease.
+- No host permissions added.
+
 ## 1.0.0
 
 First stable release; released together with the main app.

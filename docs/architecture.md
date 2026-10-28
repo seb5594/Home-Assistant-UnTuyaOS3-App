@@ -95,12 +95,12 @@ UnTuyaOS3 itself is used as it comes, with a short list of patches applied at im
 
 A scheduled workflow watches for new upstream releases and opens a pull request against `dev` when one appears. See `.github/workflows/upstream-release.yml`.
 
-## Adding tuya-cloudcutter later (idea, not a promise)
+## Tuya Breaker: combined app on dev
 
-The runner starts exactly one fixed command, so a second tool would be a second fixed command with its own menu. What it would need from the existing parts:
+The new experimental `tuya_breaker/` app embeds UnTuyaOS3 and classic CloudCutter in one Ingress UI. It reuses the original app modules through `tools/sync_project.py`, rather than maintaining a second copy by hand. Breaker-specific modules handle tool selection, the bounded profile API and the CloudCutter workflow. The original UnTuyaOS3 app stays available.
 
-- a radio in AP mode, which the adapter check already requires,
-- the isolated namespace for its DHCP/DNS/HTTP servers, which the main app already provides,
-- a new entry in the runner and the web UI, and a review of what its servers expose.
+Both tools use Python 3.13 in separate virtual environments because their `sslpsk3` APIs differ. They share one runner/lease; tool changes are refused during assignment, execution, cleanup and return. No nested Docker, host network, Supervisor API or host D-Bus is added to the main container. The existing helper can serve either main app, one lease at a time.
 
-If it happens it will most likely be a mode of the main app, not a third app.
+CloudCutter's Docker/host launcher is never invoked. The embedded controller drives only the leased radio, uses the existing verified association/DHCP target, tests real AP startup before exploitation, and runs foreground hostapd/dnsmasq/MQTT processes in its own process group. HTTP/TLS binds only to the radio's AP IP; MQTT uses that IP plus loopback; DNS/DHCP binds the leased interface. A per-run nftables forward chain with drop policy blocks routing from that AP to the container uplink. Only Breaker's AppArmor profile additionally allows the standard low-port `net_bind_service` capability. Shared cleanup removes the filter and restores managed mode before returning the radio.
+
+The controller uses fixed subprocess arguments and validated profile/image identifiers; it exposes no arbitrary shell hooks. Configuration secrets are omitted from API status and kept only for the attempt. Generated local device keys are retained privately for explicit download. See [Tuya Breaker's documentation](../tuya_breaker/DOCS.md) for current limits and evidence.

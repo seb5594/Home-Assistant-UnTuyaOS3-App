@@ -15,6 +15,10 @@ import datastruct
 import server
 import association
 
+if Path('/opt/webapp/breaker.py').exists():
+    import breaker
+    breaker.configure_server()
+
 data = Path(tempfile.mkdtemp())
 library = server.prepare_firmware(Path('/opt/untuyaos3'), data)
 for platform in server.MAGIC:
@@ -152,4 +156,81 @@ else
     iw --version
     busctl --version
     echo 'PASS: Wi-Fi helper and namespace authentication imports'
+fi
+
+if [[ -f /opt/webapp/breaker.py ]]; then
+    /opt/cloudcutter-venv/bin/python - <<'CHECK_CLOUDCUTTER'
+from pathlib import Path
+import sys
+sys.path.insert(0, '/opt/cloudcutter/src')
+import get_input
+from cloudcutter.crypto.pskcontext import PSKContext
+from cloudcutter_session import NETWORK
+assert str(NETWORK) == '10.204.0.0/24'
+assert sys.version_info[:2] == (3, 13)
+assert PSKContext()._psk_and_pskid(b'', True) == b''
+for chip in ('BK7231T', 'BK7231N', 'RTL8710BN', 'RTL8720CF'):
+    files = list((Path('/opt/untuyaos3/custom-firmware') / chip).glob('*.bin'))
+    assert files, chip
+    assert any(get_input.validate_firmware_file_internal(str(file), chip.lower()).name.startswith('VALID_') for file in files), chip
+print('PASS: CloudCutter Python 3.13, binary-PSK bridge, controller and per-chip UG/OTA library')
+CHECK_CLOUDCUTTER
+    /opt/cloudcutter-venv/bin/python - <<'CHECK_EMBEDDED_SERVERS'
+# Exercise both actual embedded entry points: an absent firmware_dir in Detach
+# must not break startup, and Detach must expose no firmware-download route.
+import http.client
+import json
+import os
+from pathlib import Path
+import socket
+import subprocess
+import tempfile
+import time
+
+with tempfile.TemporaryDirectory() as directory:
+    root = Path(directory)
+    profile = root/'profile.json'
+    profile.write_text(json.dumps({'device':{'schemas':{'test':[]}}}))
+    config = root/'config.json'
+    config.write_text(json.dumps({'uuid':'u'*12,'auth_key':'a'*16,'sec_key':'s'*16,'local_key':'l'*16,'device_id':'d'*20}))
+    firmware = next((Path('/opt/untuyaos3/custom-firmware')/'BK7231N').glob('*.bin'))
+    for method in ('configure_local_device','update_firmware'):
+        args = [method,str(profile),'/opt/cloudcutter/device-profiles/schema',str(config)]
+        if method=='update_firmware':
+            args += [str(firmware.parent),str(firmware)]
+        args += ['30','true','--ip','127.0.0.1']
+        if method=='configure_local_device':
+            args += ['--ssid','test-network','--password','test-password']
+        child = subprocess.Popen(['/opt/cloudcutter-venv/bin/python','-m','cloudcutter',*args],
+                                 env={**os.environ,'PYTHONPATH':'/opt/cloudcutter/src'},
+                                 stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+        try:
+            deadline = time.monotonic()+8
+            while True:
+                if child.poll() is not None:
+                    raise AssertionError(child.stdout.read())
+                try:
+                    with socket.create_connection(('127.0.0.1',80),timeout=.2):
+                        break
+                except OSError:
+                    if time.monotonic()>deadline:
+                        raise AssertionError('Embedded server startup deadline')
+                    time.sleep(.1)
+            # HTTP, TLS and legacy TLS must all bind only the approved address.
+            for line in Path('/proc/net/tcp').read_text().splitlines()[1:]:
+                fields = line.split()
+                host, port = fields[1].split(':')
+                if fields[3]=='0A' and int(port,16) in (80,443,4433):
+                    assert host=='0100007F', line
+            request = http.client.HTTPConnection('127.0.0.1',80,timeout=3)
+            request.request('GET','/files/'+firmware.name)
+            response = request.getresponse()
+            assert response.status==(404 if method=='configure_local_device' else 200), response.status
+            response.read(); request.close()
+        finally:
+            child.terminate()
+            child.wait(5)
+            child.stdout.close()
+print('PASS: actual CloudCutter Flash/Detach servers start, bind only approved IP, and expose firmware only in Flash mode')
+CHECK_EMBEDDED_SERVERS
 fi

@@ -1,0 +1,16 @@
+<details id="hardware-explorer" class="hardware-explorer"><summary>Device explorer · OpenBeken hardware & guides</summary>
+<div class="explorer-heading"><div><span class="eyebrow">COMMUNITY DEVICE KNOWLEDGE</span><h3>Identify the hardware first</h3><p>Find model numbers, modules, pin maps and teardown guides. A hardware entry is not a CloudCutter exploit profile.</p></div>
+<button id="ob-refresh" class="secondary" type="button">Update OpenBeken database</button></div>
+<div class="explorer-filters"><label>Search devices<input id="ob-search" type="search" placeholder="Action, LSC, model, module, keywords…" autocomplete="off"></label>
+<label>Chip<select id="ob-chip"><option value="">All chip families</option></select></label>
+<label class="explorer-check"><input id="ob-detailed" type="checkbox"> Detailed teardowns</label><label class="explorer-check"><input id="ob-template" type="checkbox"> Pin map available</label>
+<button id="ob-reset" class="secondary" type="button">Reset filters</button></div>
+<p id="ob-meta" class="hint">Database not loaded yet. Update it once; the cached list remains available offline.</p>
+<p id="ob-count" role="status" aria-live="polite"></p><div id="ob-results" class="device-grid"></div>
+<nav class="explorer-pages" aria-label="Device results pages"><button id="ob-previous" class="secondary" type="button" disabled>← Previous</button><span id="ob-page">Page 1</span><button id="ob-next" class="secondary" type="button" disabled>Next →</button></nav>
+<p class="explorer-credits">Device data: <a href="https://openbekeniot.github.io/webapp/devicesList.html" target="_blank" rel="noopener noreferrer">OpenBeken / openshwprojects</a> and the <a href="https://www.elektroda.com/rtvforum/forum507.html" target="_blank" rel="noopener noreferrer">Elektroda.com teardown community</a>. Thank you to the authors and contributors. Exploit profiles come separately from <a href="https://github.com/tuya-cloudcutter/tuya-cloudcutter" target="_blank" rel="noopener noreferrer">Tuya CloudCutter</a>.</p>
+<dialog id="ob-dialog" aria-labelledby="ob-dialog-title"><div class="dialog-heading"><h3 id="ob-dialog-title">Hardware reference</h3><button id="ob-close" class="secondary" type="button" autofocus>Close ×</button></div>
+<p id="ob-dialog-meta"></p><p class="reference-warning">Reference only. Match the exact hardware revision before using any pin map. This does not establish OTA exploit compatibility. Nothing here is applied to a device.</p>
+<pre id="ob-template-json" tabindex="0" aria-label="Read-only OpenBeken hardware template"></pre><button id="ob-copy" class="secondary" type="button">Copy reference JSON</button>
+<p class="hint">Original community data; configurations may be partial. Consult the linked teardown.</p></dialog>
+</details>

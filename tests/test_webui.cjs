@@ -6,7 +6,7 @@ const {webcrypto} = require("node:crypto");
 
 // The Web UI script runs against a tiny fake DOM: no browser or hardware is needed.
 // Elements are created on demand and count the writes that happen to them.
-function loadUi(status) {
+function loadUi(status, onPost = async () => ({})) {
   const elements = new Map();
   function element(id) {
     if (!elements.has(id)) elements.set(id, {
@@ -23,10 +23,17 @@ function loadUi(status) {
                createElement: () => element(Symbol())},
     Option: function(text, value) { this.text = text; this.value = value; },
     setInterval() {}, File: class {}, window: {confirm: () => true}, crypto: webcrypto,
-    fetch: async (path) => ({ok: true, json: async () => path === "api/firmware" ? {files: {}}
-      : {adapters: [], usb_devices: [], host: {}, ...status}})
+    fetch: async (path, options) => {
+      if (options && options.method === "POST") {
+        const result = await onPost(path, options);
+        return {ok: true, json: async () => result};
+      }
+      return {ok: true, json: async () => path === "api/firmware" ? {files: {}}
+        : {adapters: [], usb_devices: [], host: {}, ...status}};
+    }
   });
   vm.runInContext(fs.readFileSync("untuyaos3/app/static/app.js", "utf8"), context);
+  element.poll = () => vm.runInContext("poll()", context);
   return element;
 }
 
@@ -98,4 +105,58 @@ function checkReportLink() {
 }
 
 const checks = [checkLargeBatch(), checkHelperCard(), checkSecretGenerator(), checkReportLink()];
-setImmediate(() => checks.forEach((check) => check()));
+const flush = () => new Promise((resolve) => setImmediate(resolve));
+async function checkSessionSafety() {
+  const status = {state: "ready", selected_adapter: "wlan1", events: [], cursor: 0, generation: "g"};
+  let release, starts = 0, inputs = 0;
+  const element = loadUi(status, async (path) => {
+    if (path === "api/start") { starts++; await new Promise((resolve) => { release = resolve; }); }
+    if (path === "api/input") { inputs++; await new Promise((resolve) => { release = resolve; }); }
+    return {};
+  });
+  await flush();
+  assert.equal(element("start").disabled, true, "No session without reviewing the risk");
+  element("risk-ack").checked = true;
+  element("risk-ack").onchange();
+  assert.equal(element("start").disabled, false);
+  status.selected_adapter = "wlan2";
+  await element.poll();
+  assert.equal(element("risk-ack").checked, false, "Changing radio requires a new review");
+  element("risk-ack").checked = true;
+  element("risk-ack").onchange();
+  const start = element("start").onclick();
+  await element("start").onclick();
+  await element.poll();
+  assert.equal(starts, 1, "A double tap or poll cannot submit another start");
+  assert.equal(element("start").disabled, true);
+  status.state = "running";
+  release(); await start;
+  assert.equal(element("risk-ack").checked, false);
+  assert.equal(element("firmware").disabled, true);
+  assert.equal(element("platform").disabled, true);
+  element("choice").value = "2";
+  const submit = element("choice-form").onsubmit({preventDefault() {}});
+  await element("choice-form").onsubmit({preventDefault() {}});
+  await element.poll();
+  assert.equal(inputs, 1, "A double tap cannot answer the next menu by accident");
+  assert.equal(element("send").disabled, true, "Polling must not unlock a pending input");
+  release(); await submit;
+  assert.equal(element("send").disabled, false);
+  for (const state of ["cleaning", "releasing"]) {
+    status.state = state; await element.poll();
+    assert.equal(element("start").disabled, true);
+    assert.equal(element("upload").disabled, true);
+    assert.equal(element("adapter-select").disabled, true);
+  }
+  status.state = "finished"; await element.poll();
+  assert.equal(element("start").disabled, true, "A completed session does not carry consent to the next");
+  assert.equal(element("adapter-select").disabled, false);
+  assert.equal(element("upload").disabled, false);
+  element("open-firmware").onclick();
+  assert.equal(element("firmware-library").open, true);
+  console.log("PASS: per-attempt review, double-tap protection and cleanup controls");
+}
+setImmediate(async () => {
+  try { checks.forEach((check) => check()); await checkSessionSafety(); }
+  catch (error) { console.error(error); process.exitCode = 1; }
+});

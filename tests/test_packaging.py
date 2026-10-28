@@ -31,15 +31,19 @@ class PackagingTests(unittest.TestCase):
             self.assertFalse(helper.get(key, False), key)
         self.assertEqual(core["privileged"], ["NET_ADMIN", "NET_RAW"])
         self.assertEqual(helper["privileged"], ["NET_ADMIN"])
+        breaker = yaml.safe_load((ROOT / "tuya_breaker/config.yaml").read_text())
+        self.assertEqual(breaker['privileged'], core['privileged'])
+        for key in ("host_network", "host_dbus", "host_pid", "docker_api", "full_access", "usb", "hassio_api", "homeassistant_api", "ports"):
+            self.assertFalse(breaker.get(key, False), key)
         self.assertNotIn("ports", core)
-        for app in ("untuyaos3", "untuyaos3_wifi"):
+        for app in ("untuyaos3", "untuyaos3_wifi", "tuya_breaker"):
             profile = (ROOT / app / "apparmor.txt").read_text()
             self.assertIn("/share/untuyaos3-private/{,**} rwk,", profile)
             self.assertNotIn("/share/** rw", profile)
 
     def test_translations_are_valid_and_cover_options(self):
         import yaml
-        for app in ("untuyaos3", "untuyaos3_wifi"):
+        for app in ("untuyaos3", "untuyaos3_wifi", "tuya_breaker"):
             options = yaml.safe_load((ROOT / app / "config.yaml").read_text())["options"]
             for language in ("en", "de"):
                 translation = json.loads((ROOT / app / "translations" / (language+".json")).read_text(encoding="utf-8"))

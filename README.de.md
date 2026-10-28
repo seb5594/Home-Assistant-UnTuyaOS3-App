@@ -27,6 +27,8 @@
 
 ## Was ist das?
 
+**Neu auf `dev`: [Tuya Breaker](tuya_breaker/DOCS.md)** vereint UnTuyaOS3 und das klassische Tuya CloudCutter in einer experimentellen WebUI. Die bisherige App bleibt verfügbar; beide können denselben WLAN-Helper nutzen, jeweils eine Sitzung zur Zeit. Die neue CloudCutter-Integration ist noch nicht an echter Hardware getestet.
+
 Viele günstige Smart-Home-Geräte (zum Beispiel die LSC-Lampen, LED-Streifen und Steckdosenleisten von Action) sprechen nur mit der Tuya-Cloud. [UnTuyaOS3](https://github.com/tuya-cloudcutter/UnTuyaOS3) kann auf **manche** davon per WLAN eine offene Firmware aufspielen, ohne das Gehäuse zu öffnen, sofern ihre Firmware vom Exploit betroffen ist.
 
 Normalerweise brauchst du dafür einen Linux-Rechner, einen WLAN-Adapter und einen Stapel Skripte. Diese App packt alles in Home Assistant. Du wählst in der Web-Oberfläche einen übrigen WLAN-Adapter aus, drückst Start und beantwortest das nummerierte Menü des Skripts. Konsole, Live-Logs und eine Firmware-Bibliothek sind direkt in der Seitenleiste. Der Adapter wird dem Host nur für die Dauer der Sitzung weggenommen und danach zurückgegeben, dein Netzwerk bleibt, wie es war.

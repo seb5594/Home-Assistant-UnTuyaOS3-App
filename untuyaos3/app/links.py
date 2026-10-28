@@ -10,7 +10,7 @@ MY_HOME_ASSISTANT = "https://my.home-assistant.io/redirect"
 HELPER_SLUG = "untuyaos3_wifi"
 # Home Assistant names the container "<repository hash>-<app slug>" with dashes. The same
 # hash prefixes the helper's slug, because both apps come from one repository.
-OWN_HOSTNAME = re.compile(r"(?P<repository>[0-9a-f]{8}|local)-untuyaos3")
+OWN_HOSTNAME = re.compile(r"(?P<repository>[0-9a-f]{8}|local)-(?:untuyaos3|tuya-breaker)")
 
 
 def helper_url(hostname=None):

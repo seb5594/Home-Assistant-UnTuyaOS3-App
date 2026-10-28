@@ -27,10 +27,16 @@
 <details><summary>USB Wi-Fi diagnostics</summary><ul id="usb-devices" class="diagnostic-list"></ul>
 <p id="host-drivers" class="hint"></p>
 <p class="hint">USB detection and a usable Wi-Fi interface are separate checks. If a USB adapter has no Wi-Fi interface, check its port, firmware and driver in Home Assistant's host logs.</p></details></div></section>
-<section class="toolbar card"><div><h2>Dedicated Wi-Fi</h2><p id="adapter">Checking adapter…</p></div>
+<section class="card preparation-card"><div class="section-heading"><div><span class="eyebrow">2 · PREPARE THE DEVICE</span><h2>Before starting</h2></div></div>
+<div class="preparation-body"><p>Put your device into AP pairing mode. Check its chip and firmware compatibility. Keep its power connected throughout the transfer.</p>
+<p><a id="open-firmware" href="#firmware-library">Optional: upload your device's UG firmware first</a>. Bundled images are already in the script's menu.</p>
+<label class="risk-check" for="risk-ack"><input id="risk-ack" type="checkbox"><span>I understand that flashing can permanently brick this device. I have checked the target and firmware and accept the risk.</span></label>
+<p class="hint">Kickstart starts a setup Wi-Fi network; it does not configure your lamp or other outputs automatically.</p></div></section>
+<section id="session-controls" class="toolbar card"><div><span class="eyebrow">3 · RUN ONE SESSION</span><h2>Dedicated Wi-Fi</h2><p id="adapter">Checking adapter…</p>
+<p id="start-help" class="hint">Choose an adapter and acknowledge the flashing risk above.</p></div>
 <div class="actions"><button id="start" disabled>Start interactive session</button><button id="cancel" class="danger" disabled>Stop session</button>
 <a class="button secondary" href="api/logs" download="untuyaos3-logs.zip">Download logs</a></div></section>
-<div id="notice" class="notice" role="status">Reading live status…</div>
+<div id="notice" class="notice" role="status" aria-live="polite">Reading live status…</div>
 <div class="workspace">
 <section class="card terminal-card"><div class="section-heading"><div><span class="eyebrow">INTERACTIVE SESSION</span><h2>UnTuyaOS3 console</h2></div><span class="live">● LIVE</span></div>
 <pre id="terminal" tabindex="0" aria-label="UnTuyaOS3 console output"></pre>
@@ -41,12 +47,12 @@
 <div class="log-actions"><label class="follow"><input id="follow" type="checkbox" checked> Follow</label><button id="clear-logs" class="secondary">Clear logs</button></div></div>
 <pre id="logs" tabindex="0" aria-label="Live diagnostic log"></pre><p class="hint">Logs start fresh when the app starts. Clear logs deletes saved logs and clears both panels; an active session continues. Retention is limited to 6 MiB.</p></section>
 </div>
-<section class="card firmware-card"><div><span class="eyebrow">FIRMWARE LIBRARY</span><h2>Bring your own UG image</h2>
+<details id="firmware-library" class="card firmware-card"><summary>Optional · Firmware library — upload a UG image</summary><div><h2>Bring your own UG image</h2>
 <p>Bundled firmware is already available in the script's menu. Additional images stay in this app's private storage.</p>
 <p>Own a device from Action (LSC Smart, Battletron, Eurodomest)? There are <a href="https://gitea.seb5594.xyz/seb5594/Action_Battleton_Eurodomest_LSC-Smart-Custom-Firmware-Collection" target="_blank" rel="noopener noreferrer">prebuilt custom ESPHome firmwares</a> for several of them.</p></div>
 <form id="firmware-form"><label>Platform<select id="platform"><option>T1</option><option>BK7231N</option><option>RTL8720CF</option></select></label>
 <label>UG firmware (.bin)<input id="firmware" type="file" accept=".bin" required></label><button id="upload" class="secondary">Upload firmware</button></form>
-<p id="library" class="hint"></p></section>
+<p id="library" class="hint"></p><a href="#session-controls">Return to session controls ↑</a></details>
 <section class="card report-card"><div><span class="eyebrow">HELP THE COMMUNITY</span><h2>Tried a device? Tell us how it went</h2>
 <p>Every report, successful or not, helps others decide what is worth trying. The form opens on GitHub with your app version and Wi-Fi adapter already filled in. Please leave out keys, UUIDs and full logs.</p></div>
 <a id="report" class="button secondary" href="__REPORT_URL__" target="_blank" rel="noopener noreferrer">Report a device</a></section>

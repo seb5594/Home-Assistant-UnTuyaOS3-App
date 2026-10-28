@@ -37,6 +37,8 @@ def render_dockerfile(spec, slug, app, root):
               "BUILD_PACKAGES": pins(spec["build_packages"]),
               "RUNTIME_PACKAGES": pins(app["packages"]),
               "PYTHON_PACKAGES": " ".join(f"{name}=={version}" for name, version in spec["python_packages"].items())}
+    values.update({"CLOUDCUTTER_REPOSITORY": spec.get("cloudcutter_repository", ""),
+                   "CLOUDCUTTER_REVISION": spec.get("cloudcutter_revision", "")})
     template = (root / "templates" / f"{slug}.Dockerfile").read_text(encoding="utf-8")
     return HEADER + re.sub(r"@@([A-Z_]+)@@", lambda match: values[match[1]], template)
 
@@ -56,12 +58,39 @@ def outputs(root=ROOT):
     for slug, app in spec["apps"].items():
         config, files[f"{slug}/config.yaml"] = render_config(spec, slug, app)
         files[f"{slug}/Dockerfile"] = render_dockerfile(spec, slug, app, root)
-        files[f"{slug}/app/build_info.json"] = json.dumps(build_info, indent=2) + "\n"
+        info = dict(build_info)
+        if slug == "tuya_breaker":
+            info.update(cloudcutter_repository=spec["cloudcutter_repository"],
+                        cloudcutter_revision=spec["cloudcutter_revision"])
+        files[f"{slug}/app/build_info.json"] = json.dumps(info, indent=2) + "\n"
         for source in sorted((root / "shared").glob("*.py")):
             files[f"{slug}/app/{source.name}"] = render_shared_module(source)
         for language, fields in spec["translations"].items():
             translation = {key: fields[key] for key in config["options"]}
             files[f"{slug}/translations/{language}.json"] = json.dumps({"configuration": translation}, indent=2, ensure_ascii=False) + "\n"
+    if "tuya_breaker" in spec["apps"]:
+        # Share the proven UI, runner, Wi-Fi and HTTP code without maintaining a fork.
+        # Breaker-specific source files live alongside these generated base modules.
+        for source in (root / "untuyaos3/app").glob("*.py"):
+            if source.name not in {p.name for p in (root / "shared").glob("*.py")}:
+                files[f"tuya_breaker/app/{source.name}"] = "# Generated base module from untuyaos3/app; do not edit.\n" + source.read_text(encoding="utf-8")
+        for name in ("app.js", "style.css"):
+            files[f"tuya_breaker/app/static/{name}"] = (root / "untuyaos3/app/static" / name).read_text(encoding="utf-8")
+        files['tuya_breaker/app/static/style.css'] += '\n' + (root/'tuya_breaker/ui/style.css').read_text(encoding='utf-8')
+        files['tuya_breaker/app/static/style.css'] += '\n' + (root/'tuya_breaker/ui/hardware.css').read_text(encoding='utf-8')
+        page = (root / "untuyaos3/app/static/index.html").read_text(encoding="utf-8")
+        page = page.replace('<title>UnTuyaOS3</title>', '<title>Tuya Breaker</title>')
+        page = page.replace('<h1>UnTuyaOS3<span', '<h1>Tuya Breaker<span')
+        tools_page = (root / 'tuya_breaker/ui/tools.html').read_text(encoding='utf-8')
+        tools_page = tools_page.replace('<!-- HARDWARE_EXPLORER -->', (root/'tuya_breaker/ui/hardware.html').read_text(encoding='utf-8'))
+        page = page.replace('<main>', '<main>\n' + tools_page)
+        page = page.replace('</head>', '<script src="breaker.js" defer></script><script src="hardware.js" defer></script></head>')
+        page = page.replace('<h2>UnTuyaOS3 console</h2>', '<h2>Session console</h2>')
+        page = page.replace('<option>T1</option>', '<option>T1</option><option>BK7231T</option><option>RTL8710BN</option>')
+        page = page.replace('Give compatible Tuya devices a new beginning.', 'UnTuyaOS3 and Tuya CloudCutter, together in Home Assistant.')
+        files["tuya_breaker/app/static/index.html"] = page
+        files["tuya_breaker/integration/patch_upstream.py"] = (root / "untuyaos3/integration/patch_upstream.py").read_text(encoding="utf-8")
+        files["tuya_breaker/integration/dhcp.sh"] = (root / "untuyaos3/integration/dhcp.sh").read_text(encoding="utf-8")
     files[".github/apps.json"] = json.dumps({"apps": list(spec["apps"])}, indent=2) + "\n"
     return files
 

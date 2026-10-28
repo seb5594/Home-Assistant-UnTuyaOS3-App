@@ -1,6 +1,7 @@
 {
   "apps": [
     "untuyaos3",
-    "untuyaos3_wifi"
+    "untuyaos3_wifi",
+    "tuya_breaker"
   ]
 }

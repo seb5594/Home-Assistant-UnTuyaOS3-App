@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="csrf" content="__CSRF__">
+<meta name="report-url" content="__REPORT_URL__">
+<title>Tuya Breaker</title><link rel="stylesheet" href="style.css"><script src="app.js" defer></script>
+<script src="breaker.js" defer></script><script src="hardware.js" defer></script></head>
+<body>
+<header><div><span class="eyebrow">HOME ASSISTANT · DEVICE TOOLS</span><h1>Tuya Breaker<span class="version">__VERSION__</span></h1>
+<p>UnTuyaOS3 and Tuya CloudCutter, together in Home Assistant.</p>
+<p class="credit">Built on <a href="__UPSTREAM_URL__" target="_blank" rel="noopener noreferrer">UnTuyaOS3</a> by the tuya-cloudcutter project. Without their work none of this would exist.</p></div><span id="state" class="badge">Connecting…</span></header>
+<main>
+<section class="card tool-card"><div class="section-heading"><div><span class="eyebrow">EXPERIMENTAL · CHOOSE A TOOL</span><h2>One workspace, one active radio</h2></div></div>
+<div class="adapter-settings"><div class="tool-tabs" role="group" aria-label="Flashing tool">
+<button id="tool-untuyaos3" type="button" aria-pressed="true">UnTuyaOS3</button><button id="tool-cloudcutter" class="secondary" type="button" aria-pressed="false">Tuya CloudCutter</button></div>
+<p id="tool-description">UnTuyaOS3: use the established platform and firmware menus.</p>
+<p class="hint">The tools use different exploits. A successful run with one does not establish compatibility with the other. Tool selection unlocks after cleanup.</p>
+<div id="cloudcutter-settings" hidden>
+<details id="cc-configuration" open><summary>Device profile and operation</summary>
+<p><strong>CloudCutter needs an exact device/firmware profile.</strong> Check the original firmware version before removing the device from SmartLife. Patched firmware cannot be made vulnerable by selecting another profile.</p>
+<details id="hardware-explorer" class="hardware-explorer"><summary>Device explorer · OpenBeken hardware & guides</summary>
+<div class="explorer-heading"><div><span class="eyebrow">COMMUNITY DEVICE KNOWLEDGE</span><h3>Identify the hardware first</h3><p>Find model numbers, modules, pin maps and teardown guides. A hardware entry is not a CloudCutter exploit profile.</p></div>
+<button id="ob-refresh" class="secondary" type="button">Update OpenBeken database</button></div>
+<div class="explorer-filters"><label>Search devices<input id="ob-search" type="search" placeholder="Action, LSC, model, module, keywords…" autocomplete="off"></label>
+<label>Chip<select id="ob-chip"><option value="">All chip families</option></select></label>
+<label class="explorer-check"><input id="ob-detailed" type="checkbox"> Detailed teardowns</label><label class="explorer-check"><input id="ob-template" type="checkbox"> Pin map available</label>
+<button id="ob-reset" class="secondary" type="button">Reset filters</button></div>
+<p id="ob-meta" class="hint">Database not loaded yet. Update it once; the cached list remains available offline.</p>
+<p id="ob-count" role="status" aria-live="polite"></p><div id="ob-results" class="device-grid"></div>
+<nav class="explorer-pages" aria-label="Device results pages"><button id="ob-previous" class="secondary" type="button" disabled>← Previous</button><span id="ob-page">Page 1</span><button id="ob-next" class="secondary" type="button" disabled>Next →</button></nav>
+<p class="explorer-credits">Device data: <a href="https://openbekeniot.github.io/webapp/devicesList.html" target="_blank" rel="noopener noreferrer">OpenBeken / openshwprojects</a> and the <a href="https://www.elektroda.com/rtvforum/forum507.html" target="_blank" rel="noopener noreferrer">Elektroda.com teardown community</a>. Thank you to the authors and contributors. Exploit profiles come separately from <a href="https://github.com/tuya-cloudcutter/tuya-cloudcutter" target="_blank" rel="noopener noreferrer">Tuya CloudCutter</a>.</p>
+<dialog id="ob-dialog" aria-labelledby="ob-dialog-title"><div class="dialog-heading"><h3 id="ob-dialog-title">Hardware reference</h3><button id="ob-close" class="secondary" type="button" autofocus>Close ×</button></div>
+<p id="ob-dialog-meta"></p><p class="reference-warning">Reference only. Match the exact hardware revision before using any pin map. This does not establish OTA exploit compatibility. Nothing here is applied to a device.</p>
+<pre id="ob-template-json" tabindex="0" aria-label="Read-only OpenBeken hardware template"></pre><button id="ob-copy" class="secondary" type="button">Copy reference JSON</button>
+<p class="hint">Original community data; configurations may be partial. Consult the linked teardown.</p></dialog>
+</details>
+
+<button id="cc-refresh" class="secondary" type="button">Load / refresh official device catalogue</button>
+<label for="cc-search">Find device or original firmware</label><input id="cc-search" type="search" placeholder="Brand, model or firmware version" autocomplete="off">
+<label for="cc-device">Device</label><select id="cc-device"><option value="">Load the catalogue first…</option></select>
+<button id="cc-load" class="secondary" type="button">Load profiles for this device</button>
+<label for="cc-profile">Exact firmware profile</label><select id="cc-profile"><option value="">Choose a device first…</option></select>
+<form id="cc-form"><label for="cc-method">Operation</label><select id="cc-method"><option value="flash">Flash custom firmware</option><option value="detach">Detach from Tuya cloud, keep stock firmware</option></select>
+<div id="cc-flash-settings"><label for="cc-firmware">Firmware image for the profile's chip</label><select id="cc-firmware"><option value="">Upload a matching image in Firmware library…</option></select></div>
+<div id="cc-detach-settings" hidden><label for="cc-ssid">Device's destination Wi-Fi SSID</label><input id="cc-ssid" maxlength="32" autocomplete="off">
+<label for="cc-password">Destination Wi-Fi password</label><input id="cc-password" type="password" maxlength="63" autocomplete="new-password" placeholder="Enter for each attempt; empty only for open Wi-Fi">
+<p class="hint">Credentials stay in memory and this session's private temporary file. Download the resulting local device credentials below after detaching.</p></div>
+<button id="cc-save" class="secondary">Review and use this configuration</button></form>
+</details><p id="cc-review" class="hint">No CloudCutter configuration reviewed yet.</p>
+<details><summary>Private local credentials</summary>
+<a class="button secondary" href="api/cloudcutter/credentials" download="tuya-breaker-private-credentials.zip">Download private local credentials</a>
+<p class="hint">This archive contains secrets. Keep it private; do not attach it to public reports. CloudCutter changes the device's cloud configuration, including when an OTA attempt later fails.</p>
+</details>
+</div></div></section>
+<details class="card appearance-card"><summary>Appearance · dark mode & accent colour</summary>
+<label for="accent-colour">RGB accent colour</label><input id="accent-colour" type="color" value="#7ac7ff"><output id="accent-value" for="accent-colour">#7AC7FF</output>
+<button id="accent-reset" class="secondary" type="button">Restore light blue</button><p class="hint">Saved only in this browser. Dark mode stays enabled.</p></details>
+
+<section id="helper-card" class="card helper-card"><div class="section-heading"><div><span class="eyebrow">WI-FI HELPER</span><h2 id="helper-title">Looking for the helper…</h2></div>
+<span id="helper-pill" class="badge">checking</span></div>
+<div id="helper-body" class="helper-body"><p id="helper-message">Looking for the Wi-Fi Helper…</p>
+<div class="helper-actions"><a id="helper-open" class="button secondary" href="__HELPER_URL__" target="_blank" rel="noopener noreferrer">Open helper app</a>
+<button id="secret-generate" class="secondary" type="button">Generate pairing secret</button></div>
+<div id="secret-box" class="secret-box" hidden><code id="secret-value"></code><button id="secret-copy" class="secondary" type="button">Copy</button>
+<p class="hint">Paste this exact value into the Configuration tab of <strong>both</strong> apps, save, then restart them. It is only shown here and never stored.</p></div>
+<ol id="helper-steps" class="steps"><li>Install <strong>UnTuyaOS3 Wi-Fi Helper</strong> from the same repository.</li><li>Use the same pairing secret in both apps.</li><li>Start the helper. This page notices it within a few seconds.</li></ol></div></section>
+<section class="card adapter-card"><div class="section-heading"><div><span class="eyebrow">1 · CHOOSE YOUR RADIO</span><h2>Wi-Fi adapters</h2></div>
+<button id="refresh-adapters" class="secondary">Refresh adapters</button></div>
+<div class="adapter-settings"><label for="adapter-select">Dedicated Wi-Fi adapter</label><select id="adapter-select" disabled><option value="">Discovering adapters…</option></select>
+<p id="adapter-help" class="hint">One eligible adapter is selected automatically. The host connection stays under Home Assistant's control.</p>
+<ul id="adapter-reasons" class="diagnostic-list"></ul>
+<details><summary>USB Wi-Fi diagnostics</summary><ul id="usb-devices" class="diagnostic-list"></ul>
+<p id="host-drivers" class="hint"></p>
+<p class="hint">USB detection and a usable Wi-Fi interface are separate checks. If a USB adapter has no Wi-Fi interface, check its port, firmware and driver in Home Assistant's host logs.</p></details></div></section>
+<section class="card preparation-card"><div class="section-heading"><div><span class="eyebrow">2 · PREPARE THE DEVICE</span><h2>Before starting</h2></div></div>
+<div class="preparation-body"><p>Put your device into AP pairing mode. Check its chip and firmware compatibility. Keep its power connected throughout the transfer.</p>
+<p><a id="open-firmware" href="#firmware-library">Optional: upload your device's UG firmware first</a>. Bundled images are already in the script's menu.</p>
+<label class="risk-check" for="risk-ack"><input id="risk-ack" type="checkbox"><span>I understand that flashing can permanently brick this device. I have checked the target and firmware and accept the risk.</span></label>
+<p class="hint">Kickstart starts a setup Wi-Fi network; it does not configure your lamp or other outputs automatically.</p></div></section>
+<section id="session-controls" class="toolbar card"><div><span class="eyebrow">3 · RUN ONE SESSION</span><h2>Dedicated Wi-Fi</h2><p id="adapter">Checking adapter…</p>
+<p id="start-help" class="hint">Choose an adapter and acknowledge the flashing risk above.</p></div>
+<div class="actions"><button id="start" disabled>Start interactive session</button><button id="cancel" class="danger" disabled>Stop session</button>
+<a class="button secondary" href="api/logs" download="untuyaos3-logs.zip">Download logs</a></div></section>
+<div id="notice" class="notice" role="status" aria-live="polite">Reading live status…</div>
+<div class="workspace">
+<section class="card terminal-card"><div class="section-heading"><div><span class="eyebrow">INTERACTIVE SESSION</span><h2>Session console</h2></div><span class="live">● LIVE</span></div>
+<pre id="terminal" tabindex="0" aria-label="UnTuyaOS3 console output"></pre>
+<form id="choice-form"><label for="choice">Menu choice</label><input id="choice" inputmode="numeric" pattern="[0-9]{1,5}" maxlength="5" placeholder="e.g. 1" autocomplete="off" required disabled>
+<button id="send" disabled>Submit choice ↵</button></form>
+<p class="hint">Answer the numbered prompts above. Your session continues when you close this page.</p></section>
+<section class="card log-card"><div class="section-heading"><div><span class="eyebrow">ALWAYS VISIBLE</span><h2>Activity & diagnostics</h2></div>
+<div class="log-actions"><label class="follow"><input id="follow" type="checkbox" checked> Follow</label><button id="clear-logs" class="secondary">Clear logs</button></div></div>
+<pre id="logs" tabindex="0" aria-label="Live diagnostic log"></pre><p class="hint">Logs start fresh when the app starts. Clear logs deletes saved logs and clears both panels; an active session continues. Retention is limited to 6 MiB.</p></section>
+</div>
+<details id="firmware-library" class="card firmware-card"><summary>Optional · Firmware library — upload a UG image</summary><div><h2>Bring your own UG image</h2>
+<p>Bundled firmware is already available in the script's menu. Additional images stay in this app's private storage.</p>
+<p>Own a device from Action (LSC Smart, Battletron, Eurodomest)? There are <a href="https://gitea.seb5594.xyz/seb5594/Action_Battleton_Eurodomest_LSC-Smart-Custom-Firmware-Collection" target="_blank" rel="noopener noreferrer">prebuilt custom ESPHome firmwares</a> for several of them.</p></div>
+<form id="firmware-form"><label>Platform<select id="platform"><option>T1</option><option>BK7231T</option><option>RTL8710BN</option><option>BK7231N</option><option>RTL8720CF</option></select></label>
+<label>UG firmware (.bin)<input id="firmware" type="file" accept=".bin" required></label><button id="upload" class="secondary">Upload firmware</button></form>
+<p id="library" class="hint"></p><a href="#session-controls">Return to session controls ↑</a></details>
+<section class="card report-card"><div><span class="eyebrow">HELP THE COMMUNITY</span><h2>Tried a device? Tell us how it went</h2>
+<p>Every report, successful or not, helps others decide what is worth trying. The form opens on GitHub with your app version and Wi-Fi adapter already filled in. Please leave out keys, UUIDs and full logs.</p></div>
+<a id="report" class="button secondary" href="__REPORT_URL__" target="_blank" rel="noopener noreferrer">Report a device</a></section>
+<p class="caution">Flashing replaces device firmware and may make a device unusable. Use a compatible device and the correct UG image. Put the device into AP pairing mode before starting. Keep power connected during flashing.</p>
+</main><footer>Isolated radio · Home Assistant Ingress · Full verbose output<br>
+Powered by <a href="__UPSTREAM_URL__" target="_blank" rel="noopener noreferrer">UnTuyaOS3</a> (revision <a href="__UPSTREAM_COMMIT_URL__" target="_blank" rel="noopener noreferrer">__UPSTREAM_REVISION__</a>), exploit research by
+<a href="https://github.com/kuba2k2" target="_blank" rel="noopener noreferrer">kuba2k2</a> and <a href="https://github.com/libretiny-eu/libretiny" target="_blank" rel="noopener noreferrer">LibreTiny</a>.
+Not affiliated with Tuya. This app: <a href="__REPOSITORY_URL__" target="_blank" rel="noopener noreferrer">GitHub</a></footer>
+</body></html>

@@ -37,6 +37,7 @@ class Runner:
 
     def __init__(self, options, journal, fatal, root="/opt/untuyaos3", runtime="/run"):
         self.options, self.journal, self.fatal = options, journal, fatal
+        self.engine_name = "UnTuyaOS3"
         self.root = Path(root)
         self.runtime = Path(runtime)
         self.lock = threading.RLock()
@@ -78,12 +79,12 @@ class Runner:
     def input(self, choice):
         """Forward a numeric menu choice to the script. Anything but digits is refused."""
         if not isinstance(choice, str) or not re.fullmatch(r"[0-9]{1,5}", choice):
-            raise ValueError("Enter the numeric choice requested by UnTuyaOS3")
+            raise ValueError(f"Enter the numeric choice requested by {self.engine_name}")
         with self.lock:
             if self.state != "running" or self.master is None:
                 raise ValueError("No interactive run is ready")
             os.write(self.master, (choice + "\n").encode())
-            self.journal.emit("info", "Sent numeric menu choice to UnTuyaOS3")
+            self.journal.emit("info", f"Sent numeric menu choice to {self.engine_name}")
 
     def cancel(self):
         """Ask the script's process group to stop. Cleanup still runs afterwards."""
@@ -102,14 +103,32 @@ class Runner:
         env.update(PYTHONUNBUFFERED="1", TERM="dumb", LC_ALL="C.UTF-8",
                    UNTUYAOS3_SKIP_INSTALL="1", UNTUYAOS3_ALLOWED_IFACE=self.adapter.name,
                    UNTUYAOS3_ALLOWED_PHY=self.adapter.phy, UNTUYAOS3_ALLOWED_IFINDEX=str(self.adapter.ifindex))
-        env["UNTUYAOS3_WPA_CONTROL"] = control_path
+        if control_path:
+            env["UNTUYAOS3_WPA_CONTROL"] = control_path
         env["UNTUYAOS3_RUN_DIR"] = session_dir
         env["UNTUYAOS3_RUN_ID"] = secrets.token_hex(16)
         return env
 
+    def prepare_connection(self):
+        """Default engine owns one supplicant for the full session."""
+        connection = Supplicant(self.adapter, self.options.get("original_power_save"),
+                                self.journal.emit, self.cancelled)
+        # Retain the connection on the runner before startup, so startup failures
+        # still reach the same cleanup path.
+        self.connection = connection
+        return connection, connection.start()
+
+    def session_command(self, session_dir):
+        return ["bash", str(self.root / "UnTuyaOS3.sh"), "--verbose", "--interface", self.adapter.name]
+
+    def before_cleanup(self, present=True):
+        """Additional engine resources must stop before the shared radio cleanup."""
+        pass
+
     def _run(self):
         slave = None
         connection = None
+        self.connection = None
         session = None
         outcome = "cancelled"  # Stays this way if the session is cancelled before the script starts.
         started, heartbeat, health, terminating = time.monotonic(), time.monotonic(), time.monotonic(), None
@@ -119,14 +138,13 @@ class Runner:
             import struct
             import termios
             session = tempfile.TemporaryDirectory(prefix="untuya-session-", dir=self.runtime)
-            connection = Supplicant(self.adapter, self.options.get("original_power_save"),
-                                    self.journal.emit, self.cancelled)
-            control_path = connection.start()
+            self.connection = None
+            connection, control_path = self.prepare_connection()
             self.master, slave = os.openpty()
             fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", *TERMINAL_SIZE, 0, 0))
             env = self._session_environment(session.name, control_path)
-            args = ["bash", str(self.root / "UnTuyaOS3.sh"), "--verbose", "--interface", self.adapter.name]
-            self.journal.emit("info", "Starting pinned UnTuyaOS3.sh with verbose TX/RX logging")
+            args = self.session_command(session.name)
+            self.journal.emit("info", f"Starting fixed {self.engine_name} session with verbose protocol logging")
             with self.lock:
                 if self.cancelled.is_set():
                     self.state = "cancelled"
@@ -142,7 +160,7 @@ class Runner:
                     health = now
                 if now-heartbeat >= HEARTBEAT_SECONDS:
                     same_device(self.adapter)
-                    if connection.process.poll() is not None:
+                    if connection and connection.process.poll() is not None:
                         raise RuntimeError("Wi-Fi supplicant stopped unexpectedly; ending this run")
                     self.journal.emit("info", f"Run active for {int(now-started)}s; waiting for menu input, device AP or protocol output")
                     heartbeat = now
@@ -176,7 +194,7 @@ class Runner:
             outcome = "cancelled" if self.cancelled.is_set() else RESULT_BY_EXIT_CODE.get(self.exit_code, "failed")
             self.state = "cleaning"
             self.journal.emit("warning" if outcome == "unconfirmed" else "info" if self.exit_code == 0 else "error",
-                              f"UnTuyaOS3 exited with status {self.exit_code}; result={outcome}")
+                              f"{self.engine_name} exited with status {self.exit_code}; result={outcome}")
         except Exception as exc:
             outcome = "failed"
             self.state = "cleaning"
@@ -205,6 +223,7 @@ class Runner:
                 if self.master is not None:
                     os.close(self.master)
                     self.master = None
+                connection = connection or getattr(self, "connection", None)
                 if connection:
                     try:
                         connection.close()
@@ -212,6 +231,11 @@ class Runner:
                         self.journal.emit("critical", f"Wi-Fi connection cleanup failed: {exc}")
                         if present:
                             self.fatal.set()
+                try:
+                    self.before_cleanup(present=present)
+                except Exception as exc:
+                    self.journal.emit("critical", f"Engine cleanup failed: {exc}")
+                    self.fatal.set()
                 if present and not cleanup(self.adapter, self.journal.emit):
                     try:
                         same_device(self.adapter)

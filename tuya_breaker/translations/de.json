@@ -1,0 +1,12 @@
+{
+  "configuration": {
+    "pairing_token": {
+      "name": "Kopplungsgeheimnis",
+      "description": "In beiden Apps dasselbe private Geheimnis mit mindestens 32 Zeichen eintragen. WLAN wird in der WebUI der Haupt-App ausgewählt."
+    },
+    "run_timeout": {
+      "name": "Zeitlimit der Sitzung",
+      "description": "Maximale Sitzungsdauer in Sekunden, einschließlich Menüeingabe und Verbindungsversuchen (60–7200)."
+    }
+  }
+}

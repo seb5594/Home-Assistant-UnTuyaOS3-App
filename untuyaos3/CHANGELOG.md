@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0-beta.1
+
+- Add per-attempt flashing-risk acknowledgement, protect menu submissions against double taps, and keep upload controls locked during cleanup.
+- Improve phone-sized controls and make the optional firmware library collapsible.
+- Share the existing runner and UI with the new experimental Tuya Breaker app; keep the established UnTuyaOS3 command and Wi-Fi lease path.
+- Clean up a supplicant whose initial startup fails.
+
 ## 1.0.0
 
 First stable release. The flashing path is unchanged since 1.0.0-beta.4; what is new is around it.

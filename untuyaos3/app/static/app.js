@@ -3,7 +3,10 @@ const $ = (id) => document.getElementById(id);
 const token = document.querySelector('meta[name="csrf"]').content;
 let cursor = 0, running = false, polling = false, lastState = "";
 let logGeneration = null, viewEpoch = 0, adapterView = "", helperView = "";
+let currentState = "starting", currentStatus = {}, startPending = false, inputPending = false;
+let reviewedAdapter = null, reviewedTool = null, uploadPending = false;
 const terminalLimit = 500000, logLimit = 750000;
+$("risk-ack").checked = false;
 function append(element, text, limit) {
   element.textContent = (element.textContent + text).slice(-limit);
   if ($("follow").checked) element.scrollTop = element.scrollHeight;
@@ -20,14 +23,32 @@ async function api(path, value = {}, headers = {}) {
   return result;
 }
 function controls(state, data = {}) {
+  // Acknowledgement belongs to one attempt. A later session must be reviewed again.
+  const adapterName = data.selected_adapter || (data.adapter && data.adapter.name) || null;
+  if ((state === "running" && currentState !== "running") || adapterName !== reviewedAdapter || (data.tool || null) !== reviewedTool)
+    $("risk-ack").checked = false;
+  currentState = state;
+  currentStatus = data;
   running = state === "running";
+  const busy = running || Boolean(data.adapter_busy || data.selection_locked)
+    || ["assigning", "cleaning", "releasing"].includes(state);
+  const ready = ["ready", "finished", "unconfirmed", "cancelled", "failed"].includes(state)
+    && !busy && !uploadPending && data.engine_ready !== false && !data.recovery_pending && Boolean(data.selected_adapter || data.adapter);
   $("state").textContent = state.replace("_", " ");
   $("state").className = "badge " + state;
-  $("start").disabled = !["ready", "finished", "unconfirmed", "cancelled", "failed"].includes(state) || Boolean(data.adapter_busy || data.recovery_pending) || !(data.selected_adapter || data.adapter);
-  for (const id of ["choice", "send", "cancel"]) $(id).disabled = !running;
-  $("upload").disabled = running;
+  $("start").disabled = !ready || !$("risk-ack").checked || startPending;
+  $("risk-ack").disabled = busy || startPending || state === "offline";
+  $("start-help").textContent = busy ? "Wait for this session and adapter cleanup to finish."
+    : state === "offline" ? "Waiting for the app connection. Closing this page does not stop a session."
+    : !ready ? "Resolve the helper or adapter status above before starting."
+    : !$("risk-ack").checked ? "Acknowledge the flashing risk above to enable Start."
+    : "Ready to start on " + (data.selected_adapter || data.adapter.name) + ".";
+  for (const id of ["choice", "send"]) $(id).disabled = !running || inputPending;
+  $("cancel").disabled = !running;
+  for (const id of ["upload", "platform", "firmware"]) $(id).disabled = busy || startPending || uploadPending || state === "offline";
   $("refresh-adapters").disabled = Boolean(data.adapter_busy) || state === "offline";
   $("adapter-select").disabled = Boolean(data.selection_locked || data.adapter_busy) || ["offline", "running", "assigning", "cleaning", "releasing"].includes(state);
+  if (typeof window.onSessionStatus === "function") window.onSessionStatus(state, data);
 }
 function showAdapters(data) {
   const key = JSON.stringify([data.adapters, data.usb_devices, data.host, data.selected_adapter, data.selection_locked, data.adapter_error]);
@@ -147,7 +168,7 @@ async function poll() {
         releasing: "Returning the adapter and restoring its original host settings…",
         running: "Session active. Follow the console; submit a menu choice when prompted.",
         finished: "Script finished with exit code " + data.exit_code + ". Review the console and verify your device.",
-        unconfirmed: "All firmware bytes were sent, but the device did not confirm completion. Check for Kickstart Wi-Fi and verify the device before attempting another flash.",
+        unconfirmed: "The device did not confirm completion. Review the transfer log, check for Kickstart Wi-Fi and verify the device before attempting another flash.",
         cancelled: "Session stopped. Review the logs before trying again.",
         failed: "Session failed (exit " + data.exit_code + "). Review the diagnostics."}[data.state] || data.state,
         data.state === "failed");
@@ -160,9 +181,24 @@ async function poll() {
   } finally { polling = false; }
 }
 $("start").onclick = async () => {
-  $("start").disabled = true;
-  try { await api("api/start"); await poll(); $("choice").focus(); } catch (error) { notice(error.message, true); }
+  if ($("start").disabled || startPending) return;
+  startPending = true;
+  controls(currentState, currentStatus);
+  try {
+    await api("api/start");
+    $("risk-ack").checked = false;
+    await poll();
+    // Do not pop up a phone's keyboard before there is a menu to answer.
+    document.querySelector(".terminal-card")?.scrollIntoView?.({block: "start"});
+  } catch (error) { notice(error.message, true); }
+  finally { startPending = false; controls(currentState, currentStatus); }
 };
+$("risk-ack").onchange = () => {
+  reviewedAdapter = currentStatus.selected_adapter || (currentStatus.adapter && currentStatus.adapter.name) || null;
+  reviewedTool = currentStatus.tool || null;
+  controls(currentState, currentStatus);
+};
+$("open-firmware").onclick = () => { $("firmware-library").open = true; };
 $("refresh-adapters").onclick = async () => {
   $("refresh-adapters").disabled = true;
   try { await api("api/adapters/refresh"); await poll(); }
@@ -205,26 +241,35 @@ $("cancel").onclick = async () => {
 };
 $("choice-form").onsubmit = async (event) => {
   event.preventDefault();
-  try { await api("api/input", {choice: $("choice").value}); $("choice").value = ""; }
+  if (!running || inputPending) return;
+  const choice = $("choice").value;
+  if (!/^[0-9]{1,5}$/.test(choice)) { notice("Enter the numeric choice requested in the console.", true); return; }
+  inputPending = true;
+  controls(currentState, currentStatus);
+  try { await api("api/input", {choice}); $("choice").value = ""; }
   catch (error) { notice(error.message, true); }
+  finally { inputPending = false; controls(currentState, currentStatus); }
 };
 async function library() {
   const response = await fetch("api/firmware");
   if (!response.ok) return;
   const data = await response.json();
   $("library").textContent = Object.entries(data.files).map(([platform, files]) => platform + ": " + files.length + " image(s)").join(" · ");
+  if (typeof window.onFirmwareLibrary === "function") window.onFirmwareLibrary(data.files);
 }
 $("firmware-form").onsubmit = async (event) => {
   event.preventDefault();
+  if ($("upload").disabled || uploadPending) return;
   const file = $("firmware").files[0];
   if (!file) return;
-  $("upload").disabled = true;
+  uploadPending = true;
+  controls(currentState, currentStatus);
   try {
     await api("api/firmware", file, {"Content-Type": "application/octet-stream",
       "X-Firmware-Platform": $("platform").value, "X-Firmware-Name": file.name});
     notice("Firmware uploaded. Select it from the script's menu in your next session.");
     $("firmware").value = ""; await library();
   } catch (error) { notice(error.message, true); }
-  finally { $("upload").disabled = running; }
+  finally { uploadPending = false; controls(currentState, currentStatus); }
 };
 poll(); library().catch(() => {}); setInterval(poll, 1000);

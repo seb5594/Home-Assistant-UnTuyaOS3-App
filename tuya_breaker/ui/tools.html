@@ -1,0 +1,29 @@
+<section class="card tool-card"><div class="section-heading"><div><span class="eyebrow">EXPERIMENTAL · CHOOSE A TOOL</span><h2>One workspace, one active radio</h2></div></div>
+<div class="adapter-settings"><div class="tool-tabs" role="group" aria-label="Flashing tool">
+<button id="tool-untuyaos3" type="button" aria-pressed="true">UnTuyaOS3</button><button id="tool-cloudcutter" class="secondary" type="button" aria-pressed="false">Tuya CloudCutter</button></div>
+<p id="tool-description">UnTuyaOS3: use the established platform and firmware menus.</p>
+<p class="hint">The tools use different exploits. A successful run with one does not establish compatibility with the other. Tool selection unlocks after cleanup.</p>
+<div id="cloudcutter-settings" hidden>
+<details id="cc-configuration" open><summary>Device profile and operation</summary>
+<p><strong>CloudCutter needs an exact device/firmware profile.</strong> Check the original firmware version before removing the device from SmartLife. Patched firmware cannot be made vulnerable by selecting another profile.</p>
+<!-- HARDWARE_EXPLORER -->
+<button id="cc-refresh" class="secondary" type="button">Load / refresh official device catalogue</button>
+<label for="cc-search">Find device or original firmware</label><input id="cc-search" type="search" placeholder="Brand, model or firmware version" autocomplete="off">
+<label for="cc-device">Device</label><select id="cc-device"><option value="">Load the catalogue first…</option></select>
+<button id="cc-load" class="secondary" type="button">Load profiles for this device</button>
+<label for="cc-profile">Exact firmware profile</label><select id="cc-profile"><option value="">Choose a device first…</option></select>
+<form id="cc-form"><label for="cc-method">Operation</label><select id="cc-method"><option value="flash">Flash custom firmware</option><option value="detach">Detach from Tuya cloud, keep stock firmware</option></select>
+<div id="cc-flash-settings"><label for="cc-firmware">Firmware image for the profile's chip</label><select id="cc-firmware"><option value="">Upload a matching image in Firmware library…</option></select></div>
+<div id="cc-detach-settings" hidden><label for="cc-ssid">Device's destination Wi-Fi SSID</label><input id="cc-ssid" maxlength="32" autocomplete="off">
+<label for="cc-password">Destination Wi-Fi password</label><input id="cc-password" type="password" maxlength="63" autocomplete="new-password" placeholder="Enter for each attempt; empty only for open Wi-Fi">
+<p class="hint">Credentials stay in memory and this session's private temporary file. Download the resulting local device credentials below after detaching.</p></div>
+<button id="cc-save" class="secondary">Review and use this configuration</button></form>
+</details><p id="cc-review" class="hint">No CloudCutter configuration reviewed yet.</p>
+<details><summary>Private local credentials</summary>
+<a class="button secondary" href="api/cloudcutter/credentials" download="tuya-breaker-private-credentials.zip">Download private local credentials</a>
+<p class="hint">This archive contains secrets. Keep it private; do not attach it to public reports. CloudCutter changes the device's cloud configuration, including when an OTA attempt later fails.</p>
+</details>
+</div></div></section>
+<details class="card appearance-card"><summary>Appearance · dark mode & accent colour</summary>
+<label for="accent-colour">RGB accent colour</label><input id="accent-colour" type="color" value="#7ac7ff"><output id="accent-value" for="accent-colour">#7AC7FF</output>
+<button id="accent-reset" class="secondary" type="button">Restore light blue</button><p class="hint">Saved only in this browser. Dark mode stays enabled.</p></details>

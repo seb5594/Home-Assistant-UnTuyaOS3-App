@@ -41,6 +41,12 @@
 
 ## What is this?
 
+**New on `dev`: [Tuya Breaker](tuya_breaker/DOCS.md), an experimental combined app with UnTuyaOS3 and classic Tuya CloudCutter in one Ingress workspace.** It lives in `tuya_breaker/` and shares the existing Wi-Fi Helper. The original UnTuyaOS3 app remains available. This integration has software/container tests but no physical-device CloudCutter validation yet. Lightleak is out of scope for now.
+
+[![Tuya Breaker — Powered by tuya-cloudcutter + seb5594](tuya_breaker/logo.png)](tuya_breaker/DOCS.md)
+
+Its device explorer reads the [OpenBeken device database](https://openbekeniot.github.io/webapp/devicesList.html) programmatically, with search, chip/module filters, cached hardware references and source links. Thanks to **OpenBeken / openshwprojects**, the **Elektroda.com teardown community** and **tuya-cloudcutter** for their work. Hardware entries do not establish exploit compatibility; an exact CloudCutter firmware profile is still required.
+
 A lot of cheap smart-home gadgets (the LSC lamps, LED strips and power strips from Action, for example) only talk to the Tuya cloud. [UnTuyaOS3](https://github.com/tuya-cloudcutter/UnTuyaOS3) can put open firmware on **some** of them over Wi-Fi, without opening the case, as long as their firmware is affected by the exploit.
 
 Normally you need a Linux machine, a Wi-Fi adapter and a stack of scripts. This app puts all of it inside Home Assistant. You pick a spare Wi-Fi adapter in the web UI, press start and answer the script's numbered menu. The console, the live logs and a firmware library are right there in the sidebar. The adapter is taken away from the host for the duration of the session and handed back afterwards, so your network stays as it was.
