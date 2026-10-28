@@ -2,6 +2,9 @@
 import os
 import socket
 import threading
+import subprocess
+import json
+from wifi import same_device, PreflightError, command
 from protocol import INVENTORY, SOCKET, client_authenticate, receive, send, validate_interface, validate_options
 
 
@@ -35,6 +38,7 @@ def inventory(options):
 class Lease:
     def __init__(self, options, journal, lost, interface):
         validate_interface(interface)
+        self.options, self.interface, self.journal = options, interface, journal
         self.sock = connect(options, interface)
         self.closed = threading.Event()
         assignment_unknown = False
@@ -55,6 +59,7 @@ class Lease:
                     journal.emit(message["level"], message["text"], "helper")
                 elif message.get("event") == "ready":
                     self.phy = message["phy"]
+                    self.mac = message["mac"]
                     self.power_save = message.get("power_save")
                     journal.emit("info", f"Dedicated radio {self.phy} assigned to this app's isolated network namespace")
                     break
@@ -89,3 +94,41 @@ class Lease:
         except OSError:
             pass
         self.sock.close()
+
+    def release(self, adapter):
+        """Return only our idle PHY without joining or executing in host netns."""
+        import fcntl
+        self.closed.set()  # Intentional helper close must not shut down Ingress.
+        try:
+            with connect(self.options, self.interface) as control:
+                send(control, {"operation": "return"})
+                message, fds = receive(control)
+                try:
+                    if message.get("event") != "return_target" or message.get("phy") != self.phy or len(fds) != 1:
+                        raise RuntimeError(message.get("error", "Invalid authenticated return target"))
+                    if fcntl.ioctl(fds[0], 0xb703) != 0x40000000:
+                        raise RuntimeError("Return target is not a network namespace")
+                    try:
+                        same_device(adapter)
+                    except PreflightError:
+                        self.journal.emit("warning", "Assigned radio disappeared; asking helper to recover the same device on the host")
+                    else:
+                        link = json.loads(command("ip", "-j", "link", "show", "dev", adapter.name))
+                        if not link or link[0].get("address", "").lower() != self.mac.lower():
+                            raise RuntimeError("Radio MAC changed; refusing to return a different device")
+                        result = subprocess.run(["iw", "phy", adapter.phy, "set", "netns", "name", f"/proc/self/fd/{fds[0]}"],
+                                                pass_fds=(fds[0],), capture_output=True, text=True, timeout=10)
+                        if result.returncode:
+                            raise RuntimeError(f"Radio return failed: {result.stderr.strip()}")
+                finally:
+                    for fd in fds:
+                        os.close(fd)
+                send(control, {"operation": "returned"})
+                message, extra = receive(control)
+                for fd in extra:
+                    os.close(fd)
+                if extra or message.get("event") != "released":
+                    raise RuntimeError(message.get("error", "Radio restoration was not confirmed"))
+                self.journal.emit("info", "Adapter returned and original host settings restored; selection unlocked")
+        finally:
+            self.close()

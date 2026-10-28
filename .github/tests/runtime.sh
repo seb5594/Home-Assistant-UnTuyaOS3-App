@@ -52,6 +52,16 @@ with tempfile.TemporaryDirectory() as directory:
     assert result.returncode == 1, (result.stdout, result.stderr)
     assert 'DHCP skipped' in result.stderr, result.stderr
     assert not marker.exists(), 'DHCP must not start when association verification fails'
+    # Exercise the real deadline branch immediately in a throwaway script;
+    # no wall-clock wait or radio is needed to verify its failure boundary.
+    bounded = root / 'bounded-connect.sh'
+    bounded.write_text(Path('/opt/untuyaos3/scripts/connect.sh').read_text().replace('SECONDS + 90', 'SECONDS + 0'))
+    result = subprocess.run(['/bin/bash', str(bounded), 'wlan-test'],
+                            env={**os.environ, 'PATH': str(root) + os.pathsep + os.environ['PATH']},
+                            capture_output=True, text=True, timeout=5)
+    assert result.returncode == 1, (result.stdout, result.stderr)
+    assert 'No matching open device AP found within 90 seconds' in result.stderr, result.stderr
+    assert not marker.exists()
 print('PASS: pinned upstream blocks DHCP after failed association verification')
 CHECK_ASSOCIATION
     bash /opt/untuyaos3/UnTuyaOS3.sh --help

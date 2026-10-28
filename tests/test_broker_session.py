@@ -21,13 +21,46 @@ from wifi import Adapter
 
 @unittest.skipUnless(sys.platform == "linux", "Linux SCM_RIGHTS")
 class BrokerSessionTests(unittest.TestCase):
+    def test_pending_recovery_keeps_authenticated_inventory_available(self):
+        from wifi import PreflightError
+        with tempfile.TemporaryDirectory() as directory, contextlib.redirect_stdout(io.StringIO()):
+            root = Path(directory)
+            path = str(root / "wifi.sock")
+            options = {"pairing_token": "private-test-secret-" * 3}
+            (root / "options.json").write_text(json.dumps(options))
+            (root / "recovery.json").write_text(json.dumps({"name": "wlan1", "phy": "phy3", "mac": "02:00:00:00:00:01"}))
+            stopping = threading.Event()
+            with contextlib.ExitStack() as stack:
+                for target, name, value in (
+                    (broker, "DATA", root), (broker, "SOCKET", path), (lease, "SOCKET", path),
+                    (broker, "stopping", stopping), (broker, "secure_directory", Mock()),
+                    (broker, "command", Mock(return_value="phy#6\n\tInterface wlan1\n\t\ttype managed\n")),
+                    (broker, "inventory", Mock(return_value={"adapters": [], "usb_devices": []})),
+                    (broker, "restore", Mock(side_effect=PreflightError("USB device missing"))),
+                ):
+                    stack.enter_context(patch.object(target, name, value))
+                thread = threading.Thread(target=broker.main, daemon=True)
+                thread.start()
+                try:
+                    for _ in range(100):
+                        if Path(path).exists():
+                            break
+                        time.sleep(0.02)
+                    result = lease.inventory(options)
+                    self.assertEqual(result["recovery_pending"], "USB device missing")
+                    self.assertTrue(thread.is_alive())
+                    self.assertTrue((root / "recovery.json").exists())
+                finally:
+                    stopping.set()
+                    thread.join(5)
+
     def test_inventory_lease_return_and_second_lease_with_same_helper(self):
         with tempfile.TemporaryDirectory() as directory, contextlib.redirect_stdout(io.StringIO()):
             root = Path(directory)
             path = str(root / "wifi.sock")
             options = {"pairing_token": "private-test-secret-" * 3}
             (root / "options.json").write_text(json.dumps(options))
-            snapshot = {"name": "wlan1", "phy": "phy0", "power_save": "on"}
+            snapshot = {"name": "wlan1", "phy": "phy0", "mac": "02:00:00:00:00:01", "power_save": "on"}
             stopping = threading.Event()
             restored = threading.Event()
             fatal = threading.Event()
@@ -36,7 +69,7 @@ class BrokerSessionTests(unittest.TestCase):
                 for target, name, value in (
                     (broker, "DATA", root), (broker, "SOCKET", path), (lease, "SOCKET", path),
                     (broker, "stopping", stopping), (broker, "secure_directory", Mock()),
-                    (broker, "command", Mock(return_value="")),
+                    (broker, "command", Mock(return_value="phy#0\n\tInterface wlan1\n\t\ttype managed\n")),
                     (broker, "inventory", Mock(return_value={"adapters": [{"name": "wlan1", "eligible": True}], "usb_devices": []})),
                     (broker, "handover", Mock(return_value=(Adapter("wlan1", "phy0", 3), snapshot))),
                     (broker, "restore", Mock(side_effect=lambda *args, **kwargs: restored.set())),
@@ -58,7 +91,9 @@ class BrokerSessionTests(unittest.TestCase):
                         self.assertEqual(active.phy, "phy0")
                         # Discovery remains available while the radio is assigned.
                         self.assertTrue(lease.inventory(options)["adapters"])
-                        active.close()
+                        with patch.object(lease, "same_device"), patch.object(lease, "command", return_value=json.dumps([{"address": snapshot["mac"]}])), patch.object(lease.subprocess, "run", return_value=Mock(returncode=0)) as move:
+                            active.release(Adapter("wlan1", "phy0", 3))
+                        self.assertEqual(move.call_args.args[0][:6], ["iw", "phy", "phy0", "set", "netns", "name"])
                         active = None
                         self.assertTrue(restored.wait(3))
                         self.assertFalse(fatal.is_set())

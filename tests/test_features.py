@@ -111,7 +111,7 @@ class DeviceTests(unittest.TestCase):
                 self.devices.choose(value)
         self.refresh([{"name": "wlan1", "eligible": True}])
         self.devices.lease = Mock()
-        with self.assertRaisesRegex(ValueError, "Restart"):
+        with self.assertRaisesRegex(ValueError, "Wait"):
             self.devices.choose("wlan1")
 
     def test_helper_failure_keeps_ui_available_without_claiming_radio(self):

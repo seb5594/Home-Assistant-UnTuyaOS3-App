@@ -23,6 +23,7 @@ class Runner:
         self.state, self.exit_code, self.adapter = "starting", None, None
         self.process, self.master, self.thread = None, None, None
         self.cancelled = threading.Event()
+        self.completed = None
 
     def preflight(self):
         self.adapter = discover(self.options["interface"], self.journal.emit)
@@ -44,9 +45,8 @@ class Runner:
                 self.adapter = current
             except Exception as exc:
                 self.state = "failed"
-                self.journal.emit("critical", f"Preflight failed before starting: {exc}")
-                self.fatal.set()
-                raise ValueError("Wi-Fi preflight failed; app is stopping") from exc
+                self.journal.emit("error", f"Preflight failed before starting: {exc}")
+                raise ValueError("Wi-Fi preflight failed; release/recovery is required before retrying") from exc
             self.cancelled.clear()
             self.state, self.exit_code = "running", None
             self.thread = threading.Thread(target=self._run, daemon=True)
@@ -74,7 +74,7 @@ class Runner:
     def _run(self):
         slave = None
         connection = None
-        started, heartbeat, terminating = time.monotonic(), time.monotonic(), None
+        started, heartbeat, health, terminating = time.monotonic(), time.monotonic(), time.monotonic(), None
         decoder = codecs.getincrementaldecoder("utf-8")("replace")
         try:
             import fcntl
@@ -102,6 +102,9 @@ class Runner:
             slave = None
             while True:
                 now = time.monotonic()
+                if now-health >= 1:
+                    same_device(self.adapter)
+                    health = now
                 if now-heartbeat >= 10:
                     same_device(self.adapter)
                     if connection.process.poll() is not None:
@@ -145,6 +148,12 @@ class Runner:
             self.journal.emit("error", f"Run failed: {type(exc).__name__}: {exc}")
         finally:
             with self.lock:
+                present = True
+                try:
+                    same_device(self.adapter)
+                except Exception:
+                    present = False
+                    self.journal.emit("error", "Wi-Fi adapter disappeared or was replaced. Run stopped; reconnect it and refresh adapters after recovery")
                 if self.process:
                     # Kill any leftover DHCP/scan descendants before restoring the adapter.
                     try:
@@ -166,12 +175,19 @@ class Runner:
                         connection.close()
                     except Exception as exc:
                         self.journal.emit("critical", f"Wi-Fi connection cleanup failed: {exc}")
-                        self.fatal.set()
-                if not cleanup(self.adapter, self.journal.emit):
+                        if present:
+                            self.fatal.set()
+                if present and not cleanup(self.adapter, self.journal.emit):
                     self.journal.emit("critical", "Cleanup incomplete; stopping app to release the radio")
                     self.fatal.set()
                 self.process = None
-                self.state = locals().get("outcome", "cancelled")
+                self.state = "releasing"
+            if self.completed:
+                try:
+                    self.completed()
+                except Exception as exc:
+                    self.journal.emit("error", f"Adapter release pending: {exc}")
+            self.state = locals().get("outcome", "cancelled")
 
     def shutdown(self):
         self.cancel()

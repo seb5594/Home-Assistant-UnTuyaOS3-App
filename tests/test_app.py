@@ -481,6 +481,16 @@ class PtyTests(unittest.TestCase):
         self.assertEqual(runner.state, "cancelled")
         self.assertIsNone(runner.process)
 
+    def test_hardware_disappearance_stops_run_without_killing_ingress(self):
+        from unittest.mock import Mock
+        runner, _ = self.run_script('sleep 20\n')
+        with patch("runner.same_device", side_effect=wifi.PreflightError("removed")):
+            runner.completed = Mock()
+            runner.thread.join(5)
+            self.assertEqual(runner.state, "failed")
+            self.assertFalse(runner.fatal.is_set())
+            runner.completed.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

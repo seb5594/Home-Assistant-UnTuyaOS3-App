@@ -31,7 +31,7 @@ These source options show what that HAOS configuration enables; they do **not** 
 
 Open **USB Wi-Fi diagnostics** after **Refresh adapters**. It displays the running kernel, loaded Wi-Fi-related modules visible in `/sys/module`, USB identity, bound USB-interface drivers and WLAN names. Module visibility alone is not a compatibility certificate. Discovery includes Ralink, MediaTek, Marvell, Broadcom, Realtek and Atheros driver families; it neither loads modules nor changes host firmware.
 
-An assigned USB radio intentionally disappears from the host's network namespace. The UI labels it **assigned to this app**, not missing firmware. Restart the main app to release it before choosing another. A stale rfkill entry belonging to another moved/unplugged radio is ignored; the selected radio must still have readable, explicitly unblocked rfkill state.
+An assigned USB radio intentionally disappears from the host's network namespace. The UI labels it **assigned to this app**, not missing firmware. The adapter returns automatically after a run; selection unlocks when the helper confirms restoration. If USB resets and the PHY number changes, recovery uses the saved MAC and device attributes. A stale rfkill entry belonging to another moved/unplugged radio is ignored; the selected radio must still have readable, explicitly unblocked rfkill state.
 
 If USB enumeration is visible but no WLAN interface exists, reconnect the adapter directly to a USB port and refresh. Inspect Home Assistant's host logs for firmware/driver errors and use its normal OS update UI. If the adapter is present but rejected, follow the rejection reason; do not disable protection mode or use Home Assistant's management Wi-Fi.
 

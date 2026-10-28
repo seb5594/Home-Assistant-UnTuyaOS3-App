@@ -23,11 +23,11 @@ function controls(state, data = {}) {
   running = state === "running";
   $("state").textContent = state;
   $("state").className = "badge " + state;
-  $("start").disabled = !["ready", "finished", "cancelled", "failed"].includes(state) || Boolean(data.adapter_busy) || !(data.selected_adapter || data.adapter);
+  $("start").disabled = !["ready", "finished", "cancelled", "failed"].includes(state) || Boolean(data.adapter_busy || data.recovery_pending) || !(data.selected_adapter || data.adapter);
   for (const id of ["choice", "send", "cancel"]) $(id).disabled = !running;
   $("upload").disabled = running;
   $("refresh-adapters").disabled = Boolean(data.adapter_busy) || state === "offline";
-  $("adapter-select").disabled = Boolean(data.selection_locked || data.adapter_busy) || state === "offline";
+  $("adapter-select").disabled = Boolean(data.selection_locked || data.adapter_busy) || ["offline", "running", "assigning", "cleaning", "releasing"].includes(state);
 }
 function showAdapters(data) {
   const key = JSON.stringify([data.adapters, data.usb_devices, data.host, data.selected_adapter, data.selection_locked, data.adapter_error]);
@@ -49,7 +49,7 @@ function showAdapters(data) {
   }
   select.value = data.selected_adapter || "";
   $("adapter-help").textContent = data.selection_locked
-    ? "This radio is assigned to the app. Restart the main app in Home Assistant to release it before choosing another. The helper stays ready."
+    ? "This radio is assigned to the active session. After the session ends and the radio is restored, selection unlocks automatically."
     : data.adapter_error || "One eligible adapter is selected automatically. Choose here when more than one is available.";
   $("usb-devices").replaceChildren();
   for (const entry of data.usb_devices || []) {
@@ -95,6 +95,7 @@ async function poll() {
       notice({ready: "Ready. Start a session, then answer the script's numbered prompts.",
         select_adapter: data.adapter_error || "Select an eligible Wi-Fi adapter above. Start the helper first if discovery is unavailable.",
         assigning: "Checking and assigning the selected radio to this app…",
+        releasing: "Returning the adapter and restoring its original host settings…",
         running: "Session active. Follow the console; submit a menu choice when prompted.",
         finished: "Script finished with exit code " + data.exit_code + ". Review the console and verify your device.",
         cancelled: "Session stopped. Review the logs before trying again.",

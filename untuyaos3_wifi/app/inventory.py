@@ -27,6 +27,7 @@ def adapter_details(name, sys_net=Path("/sys/class/net")):
     device = sys_net / name / "device"
     path = device.resolve().as_posix()
     return {"driver": driver_name(device), "bus": "USB" if "/usb" in path else "PCI/internal",
+            "device_path": path if device.exists() else None,
             "usb_path": device.resolve().name.split(":", 1)[0] if "/usb" in path else None}
 
 

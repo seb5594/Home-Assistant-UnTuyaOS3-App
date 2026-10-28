@@ -11,13 +11,14 @@
   <a href="https://paypal.me/seb5594"><img src="https://img.shields.io/static/v1?label=Support&amp;message=PayPal&amp;color=0070BA&amp;logo=paypal&amp;logoColor=white&amp;style=for-the-badge" alt="PayPal" height="40"></a>
   <a href="https://buymeacoffee.com/seb5594"><img src="https://img.shields.io/static/v1?label=Support&amp;message=Buy%20Me%20a%20Coffee&amp;color=FFDD00&amp;logo=buy-me-a-coffee&amp;logoColor=black&amp;style=for-the-badge" alt="Buy Me a Coffee" height="40"></a><br>
   <a href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fseb5594%2FHome-Assistant-Apps"><img src="https://img.shields.io/static/v1?label=Home%20Assistant&amp;message=Add%20app%20repository&amp;color=18BCF2&amp;logo=homeassistant&amp;logoColor=white&amp;style=for-the-badge" alt="Home Assistant" height="28"></a>
-  <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/releases/tag/v1.0.0-beta.1"><img src="https://img.shields.io/static/v1?label=version&amp;message=Beta%201&amp;color=1877A5&amp;style=for-the-badge" alt="version" height="28"></a>
+  <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/releases"><img src="https://img.shields.io/static/v1?label=version&amp;message=Beta%202&amp;color=1877A5&amp;style=for-the-badge" alt="version" height="28"></a>
   <img src="https://img.shields.io/static/v1?label=image%20pulls&amp;message=45&amp;color=1877A5&amp;style=for-the-badge" alt="image pulls" height="28"><br>
   <img src="https://img.shields.io/static/v1?label=arch%20%26%20size&amp;message=amd64%20151.2%20%C2%B7%20aarch64%20165.6%20MiB&amp;color=157F71&amp;style=flat" alt="arch &amp; size" height="20">
   <img src="https://img.shields.io/static/v1?label=stage&amp;message=experimental&amp;color=2F855A&amp;style=flat" alt="stage" height="20">
   <img src="https://img.shields.io/static/v1?label=ingress&amp;message=enabled&amp;color=7C3AED&amp;style=flat" alt="ingress" height="20">
   <img src="https://img.shields.io/static/v1?label=mounts%20%28read-write%29&amp;message=share&amp;color=B45309&amp;style=flat" alt="mounts (read-write)" height="20">
   <img src="https://img.shields.io/static/v1?label=privileged&amp;message=NET_ADMIN%2C%20NET_RAW&amp;color=B45309&amp;style=flat" alt="privileged" height="20"><br>
+  <a href="https://github.com/seb5594/Home-Assistant-Apps/stargazers"><img src="https://img.shields.io/github/stars/seb5594/Home-Assistant-UnTuyaOS3-App?label=stars&amp;style=flat" alt="stars" height="20"></a>
   <a href="https://github.com/seb5594/Home-Assistant-Apps/issues"><img src="https://img.shields.io/github/issues/seb5594/Home-Assistant-UnTuyaOS3-App?label=issues&amp;style=flat" alt="issues" height="20"></a>
   <img src="https://img.shields.io/static/v1?label=runtime%20tests&amp;message=4%20passed&amp;color=2F855A&amp;style=flat" alt="runtime tests" height="20">
   <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/seb5594/Home-Assistant-UnTuyaOS3-App/ci.yml?branch=dev&amp;label=checks&amp;style=flat" alt="checks" height="20"></a>
@@ -52,7 +53,9 @@ Consult the upstream [FAQ](https://github.com/tuya-cloudcutter/UnTuyaOS3/wiki/FA
 5. Start the main app and select **Open Web UI**. The only eligible adapter is selected automatically. If several are available, select one from **Wi-Fi adapter**. The list includes the driver and USB/internal connection. An explicit selection is remembered.
 6. After plugging in a USB adapter, select **Refresh adapters**. **USB detection** distinguishes USB enumeration, driver binding and a usable network interface.
 
-**Updating from 0.1.x:** stop the main app first, update both apps to this release, then start the helper and main app. The helper protocol changed; mixed versions are rejected. Existing pairing secrets remain valid. Legacy interface options are ignored in favor of the Web UI.
+**Updating to 1.0.0-beta.2:** stop the main app first, update both apps to this release, then start the helper and main app. The helper protocol is now v3; update both apps together. Mixed protocols are rejected. Existing pairing secrets remain valid. Legacy interface options are ignored in favor of the Web UI.
+
+If the helper starts with **zero wireless network interfaces**, it immediately exits with USB diagnostics and an explicit error. Reconnect the adapter or check its host driver, then start the helper again through Home Assistant. Busy adapters still count as detected, and a radio already leased to the main app is tracked separately.
 
 Both apps start manually. Multiple flashing sessions can run within one main-app session. The helper remains ready after returning a radio. Do not enable an automatic restart watchdog during flashing. No VM, host terminal or end-user shell commands are required.
 
@@ -68,7 +71,7 @@ Use Ethernet for Home Assistant management. An eligible Wi-Fi adapter must have:
 
 Before **Start**, adapters can be refreshed and changed without modifying host networking. The helper rechecks eligibility immediately before handover. It temporarily marks only that interface unmanaged and moves its physical radio into the main app's isolated network namespace. Busy interfaces are rejected; an active management connection is never disconnected to free an adapter.
 
-Once a radio is assigned, restart the main app from Home Assistant to release it before choosing another. This keeps host namespace access out of the main app. There is no automatic switch to a different radio during a session.
+After a session finishes, fails or is cancelled, the app returns its dedicated radio and the helper restores the original host settings. The adapter dropdown unlocks after this handshake. No main-app restart is required to choose another adapter. Switching during an active session remains blocked.
 
 The Web UI remains available when discovery fails or no adapter is eligible, so rejection reasons can be read and a newly connected adapter can be selected. Flashing stays blocked. A failed identity/ownership check after assignment stops the main app and releases its namespace. There is no fallback to host networking or broader permissions.
 
@@ -109,6 +112,8 @@ Bundled upstream ESPHome Kickstart images are copied to private persistent stora
 
 Format checks do not establish authenticity or device compatibility. Flashing can brick a device or void its warranty. Use compatible hardware, correct firmware and uninterrupted power.
 
+The initial device-AP scan now has a **90-second deadline**. If no matching open AP is found, the run stops before DHCP. Adapter disappearance is checked during scanning and throughout a run; no device-wide reconnect loop is used.
+
 ## Logs and recovery
 
 The console shows live PTY output. The separate activity panel includes timestamped diagnostics, driver events and all script output. Ten-second heartbeats indicate that the script is waiting for input, an AP or protocol output.
@@ -119,7 +124,7 @@ Each app starts with fresh logs, removing only its previous `app.log` files and 
 
 If startup fails, read both apps' **Log** tabs. If the helper is unavailable, start it and select **Refresh adapters**. Streaming Ingress requests are supported; the older misleading body-length error was fixed in 0.1.1-beta.3.
 
-After a normal stop, the main app disconnects and resets only the leased interface. When its network namespace is destroyed, Linux returns the radio to the host. The helper checks its identity and idle state, then restores its previous settings. Recovery metadata is written before host changes. If restoration cannot finish, stop the main app and restart the helper from Home Assistant. Device removal, driver faults or host crashes may prevent immediate restoration; recovery metadata is retained.
+After each run the main app disconnects and resets only the leased interface, then returns that radio through an authenticated handshake. The helper checks its MAC and available device identity (bus, driver, USB path and device path), allowing a new PHY number after a USB reset. Matching by PHY number or interface name alone is not sufficient. An active or different adapter is never disconnected for recovery. Recovery metadata is written before host changes and retained until restoration succeeds. Pending recovery stays visible through Ingress; reconnect a missing USB adapter and refresh. The helper retries while running. If the main app exits unexpectedly, namespace destruction still returns any surviving radio to the host.
 
 ## Permission boundaries
 
@@ -142,7 +147,7 @@ The helper necessarily has host-network `NET_ADMIN` and host D-Bus access. Linux
 
 The Supervisor's `share` mount provides a local Unix socket for SCM_RIGHTS descriptor passing. Custom enforcing AppArmor profiles allow only `/share/untuyaos3-private/`, excluding unrelated shared files. Do not disable AppArmor.
 
-Both apps mutually authenticate using nonce-based HMAC challenges before passing any namespace descriptor. The secret is never sent over the socket. Protocol version and requested operation scope are bound to the proof. The helper rejects the host's own network namespace as a destination. No host PID, Docker socket, `setns` or `SYS_ADMIN` is required.
+Both apps mutually authenticate using nonce-based HMAC challenges before passing any namespace descriptor. The secret is never sent over the socket. Protocol version and requested operation scope are bound to the proof. For assignment, the helper rejects its own host network namespace as a destination. For return only, it sends a temporary read-only descriptor of its network namespace to the authenticated app. The app passes that descriptor solely to a fixed `iw` command for its verified leased PHY and closes it immediately; it is not inherited by the flash script. No process enters the host network namespace, and no host PID, Docker socket, `setns` or `SYS_ADMIN` is required. A namespace descriptor by itself does not grant the capabilities required to enter it.
 
 Container names and internal DNS names are addresses, not credentials. They cannot replace the pairing secret or carry a namespace descriptor over HTTP/TCP. Both apps use the fixed local socket automatically; no hostname is configured. Keep the same private secret in both apps. Publishing an automatically generated secret in `/share` would expose it to other apps with sufficient mount access.
 

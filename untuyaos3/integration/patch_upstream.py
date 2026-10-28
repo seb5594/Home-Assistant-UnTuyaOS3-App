@@ -7,6 +7,17 @@ def patch(root):
     connect = root / "scripts/connect.sh"
     text = connect.read_text()
     changes = {
+        '    while :; do':
+            '    local __untuya_scan_deadline=$((SECONDS + 90))\n'
+            '    while :; do\n'
+            '        if (( SECONDS >= __untuya_scan_deadline )); then\n'
+            '            die "No matching open device AP found within 90 seconds. Check AP pairing mode and reception, or select another adapter. DHCP was not started."; return 1\n'
+            '        fi\n'
+            '        iw dev "$iface" info >/dev/null 2>&1 || { die "Selected Wi-Fi adapter disappeared; session stopped."; return 1; }\n'
+            '        local __untuya_remaining=$((__untuya_scan_deadline - SECONDS))\n'
+            '        if (( __untuya_remaining > 15 )); then __untuya_remaining=15; fi',
+        'raw="$(iw dev "$iface" scan 2>&1)"':
+            'raw="$(timeout "${__untuya_remaining}s" iw dev "$iface" scan 2>&1)"',
         'command -v rfkill >/dev/null 2>&1 && rfkill unblock wifi 2>/dev/null':
             ': # Never unblock host radios.',
         'udhcpc -i "$iface" -q -n >/dev/null 2>&1':

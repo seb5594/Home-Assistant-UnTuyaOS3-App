@@ -51,12 +51,15 @@ def send(sock, message, fd=None):
 def receive(sock):
     descriptors = []
     try:
-        data, ancillary, flags, _ = sock.recvmsg(MAX_PACKET, socket.CMSG_SPACE(16*array.array("i").itemsize))
+        data, ancillary, flags, _ = sock.recvmsg(MAX_PACKET, socket.CMSG_SPACE(16*array.array("i").itemsize),
+                                               getattr(socket, "MSG_CMSG_CLOEXEC", 0))
         for level, kind, raw in ancillary:
             if level == socket.SOL_SOCKET and kind == socket.SCM_RIGHTS:
                 fds = array.array("i")
                 fds.frombytes(raw[:len(raw) - len(raw) % fds.itemsize])
                 descriptors.extend(fds)
+        for fd in descriptors:
+            os.set_inheritable(fd, False)
         if flags & (socket.MSG_TRUNC | socket.MSG_CTRUNC):
             raise ValueError("Truncated IPC request")
         if not data:

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.0-beta.2
+
+- Recover the same USB device by MAC and physical-device identity after PHY renumbering, without touching a different or active adapter.
+- Keep helper discovery available during pending recovery; retain recovery metadata and retry without a restart loop.
+- Exit helper startup immediately with explicit USB diagnostics when no WLAN interface exists.
+- Return the dedicated radio after each run through authenticated protocol v3 and unlock adapter selection after restoration.
+- Bound initial AP discovery to 90 seconds and abort promptly if the selected interface disappears.
+- Preserve Ingress after device loss and expose pending recovery instead of a generic connection-loss message.
+- Set received namespace descriptors non-inheritable; no new capabilities or host-network mode for the main app.
+
 ## 1.0.0-beta.1
 
 - Preserve the user-confirmed AR9271 flashing path and isolated two-app design.

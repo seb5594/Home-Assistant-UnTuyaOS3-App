@@ -14,7 +14,7 @@ import time
 
 from journal import Journal
 from protocol import INVENTORY, SOCKET, receive, secure_directory, send, server_authenticate, validate_options
-from inventory import adapter_details, inventory
+from inventory import adapter_details, inventory, usb_devices
 from wifi import NM, PreflightError, bus, command, inspect, nm_unmanaged, parse_interfaces, radio_unblocked
 
 DATA = Path("/data")
@@ -80,15 +80,33 @@ def restore(snapshot, log, wait=30):
     deadline = time.monotonic() + wait
     while True:
         interfaces = parse_interfaces(command("iw", "dev"))
-        selected = next((i for i in interfaces if i["phy"] == snapshot["phy"]), None)
+        matches = []
+        for candidate in interfaces:
+            try:
+                address = json.loads(command("ip", "-j", "link", "show", "dev", candidate["name"]))[0]["address"]
+                if address.lower() != snapshot["mac"].lower():
+                    continue
+                details = adapter_details(candidate["name"])
+                if any(snapshot.get(key) and snapshot[key] != details.get(key)
+                       for key in ("bus", "driver", "usb_path", "device_path")):
+                    continue
+                matches.append(candidate)
+            except (OSError, ValueError, KeyError, IndexError, PreflightError):
+                continue
+        if len(matches) > 1:
+            raise PreflightError("Ambiguous returned radio identity; recovery retained without changing networking")
+        selected = matches[0] if matches else None
         if selected:
             name = selected["name"]
+            if selected["phy"] != snapshot["phy"]:
+                log("info", f"Recovered the same adapter under new radio identity {snapshot['phy']} -> {selected['phy']} (MAC and device identity verified)")
             inspect(selected, interfaces, allow_up=True)
             link = json.loads(command("ip", "-j", "address", "show", "dev", name))[0]
             if link["address"] != snapshot["mac"] or link.get("addr_info") or link.get("master"):
                 raise PreflightError("Returned radio identity/state changed; refusing to restore a different or active adapter")
             if command("iw", "dev", name, "link").strip() != "Not connected.":
                 raise PreflightError("Returned radio has an active link; refusing restoration")
+            nm_properties(name, log)  # Also refuse a reconnect already in progress.
             # Only the dedicated radio is touched. Never restart network managers.
             if snapshot.get("power_save") in ("on", "off"):
                 command("ip", "link", "set", "dev", name, "up")
@@ -100,9 +118,21 @@ def restore(snapshot, log, wait=30):
             (DATA / "recovery.json").unlink(missing_ok=True)
             return
         if time.monotonic() >= deadline:
-            raise PreflightError("Radio has not returned to the host. Stop UnTuyaOS3 in Home Assistant, "
-                                 "then restart the Wi-Fi Helper to retry restoration. Recovery metadata retained.")
+            raise PreflightError("Assigned adapter has not returned as an idle, matching device. Stop the main app; "
+                                 "reconnect a missing USB adapter and refresh. Recovery metadata retained; no other adapter was changed")
         time.sleep(0.5)
+
+
+def try_restore(snapshot, log):
+    try:
+        restore(snapshot, log, wait=0)
+        return True
+    except (PreflightError, OSError, ValueError, KeyError) as exc:
+        message = str(exc)
+        if snapshot.get("recovery_error") != message:
+            log("warning", "Recovery pending: " + message)
+            snapshot["recovery_error"] = message
+        return False
 
 
 def handover(fd, interface, log):
@@ -110,7 +140,12 @@ def handover(fd, interface, log):
     adapter, snapshot = validate_host(interface, log)
     # Durable recovery data before changing host state.
     recovery = DATA / "recovery.json"
-    recovery.write_text(json.dumps(snapshot))
+    temporary = DATA / "recovery.json.tmp"
+    with temporary.open("w") as file:
+        file.write(json.dumps(snapshot))
+        file.flush()
+        os.fsync(file.fileno())
+    temporary.replace(recovery)
     try:
         if snapshot["managed"]:
             log("info", f"Temporarily reserving only {interface} from NetworkManager")
@@ -140,12 +175,18 @@ def main():
     socket_owned = False
     try:
         options = json.loads((DATA / "options.json").read_text())
-        journal.emit("info", f"Available host wireless interfaces: {parse_interfaces(command('iw', 'dev'))}")
+        available = parse_interfaces(command("iw", "dev"))
+        journal.emit("info", f"Available host wireless interfaces: {available}")
+        if not available:
+            journal.emit("error", "USB diagnostics: " + json.dumps(usb_devices()))
+            raise PreflightError("No wireless network interface detected. Helper exits immediately. Reconnect the adapter or check its HAOS driver, then start the helper in Home Assistant. Existing recovery metadata is retained")
         _, token = validate_options(options)
         journal.emit("info", "Wi-Fi Helper starting; adapter selection is available in the main Web UI; no HTTP listener")
         if (DATA / "recovery.json").exists():
             journal.emit("warning", "Recovering an interrupted previous assignment")
-            restore(json.loads((DATA / "recovery.json").read_text()), journal.emit)
+            snapshot = json.loads((DATA / "recovery.json").read_text())
+            if try_restore(snapshot, journal.emit):
+                snapshot = None
         journal.emit("info", "Initial inventory: " + json.dumps(inventory(validate_host, journal.emit)))
         secure_directory()
         path = Path(SOCKET)
@@ -170,16 +211,21 @@ def main():
         server.listen(4)
         server.settimeout(1)
         journal.emit("info", "Ready. Start the UnTuyaOS3 app in Home Assistant.")
+        next_recovery = 0
         while not stopping.is_set():
+            if snapshot is not None and peer is None and time.monotonic() >= next_recovery:
+                if try_restore(snapshot, journal.emit):
+                    snapshot = None
+                    journal.emit("info", "Radio recovery completed; ready for a new assignment")
+                next_recovery = time.monotonic() + 5
             readable, _, _ = select.select([server] + ([peer] if peer else []), [], [], 1)
             if peer and peer in readable:
                 if peer.recv(1):
                     raise ValueError("Unexpected data on active lease")
                 peer.close()
                 peer = None
-                restore(snapshot, journal.emit)
-                snapshot = None
-                journal.emit("info", "Radio returned. Ready for another main-app session")
+                journal.emit("info", "Lease ended; recovering the adapter by device identity")
+                next_recovery = 0
             if server not in readable:
                 continue
             client, _ = server.accept()
@@ -191,10 +237,34 @@ def main():
                 if interface == INVENTORY:
                     if request.get("operation") != "inventory" or fds:
                         raise ValueError("Inventory requests must not contain namespace descriptors")
-                    send(client, inventory(validate_host, journal.emit, snapshot))
+                    result = inventory(validate_host, journal.emit, snapshot if peer else None)
+                    result["recovery_pending"] = snapshot.get("recovery_error", "Waiting for radio return") if snapshot and peer is None else ""
+                    send(client, result)
+                    continue
+                if request.get("operation") == "return":
+                    client.settimeout(15)
+                    if fds or snapshot is None or peer is None or interface != snapshot["name"]:
+                        raise ValueError("No matching active lease for return")
+                    host_fd = os.open("/proc/self/ns/net", os.O_RDONLY)
+                    try:
+                        send(client, {"event": "return_target", "phy": snapshot["phy"]}, host_fd)
+                    finally:
+                        os.close(host_fd)
+                    returned, extra = receive(client)
+                    for descriptor in extra:
+                        os.close(descriptor)
+                    if extra or returned.get("operation") != "returned":
+                        raise ValueError("Invalid radio return acknowledgement")
+                    peer.close()
+                    peer = None
+                    if try_restore(snapshot, journal.emit):
+                        snapshot = None
+                        send(client, {"event": "released"})
+                    else:
+                        send(client, {"error": snapshot["recovery_error"], "recovery_pending": True})
                     continue
                 if snapshot is not None:
-                    raise ValueError("A radio is already assigned. Restart the main app before selecting another adapter")
+                    raise ValueError("Previous radio recovery is pending. Review helper diagnostics before another assignment")
                 if request.get("operation") != "lease":
                     raise ValueError("Unknown helper operation")
                 if request.get("interface") != interface:
@@ -211,10 +281,12 @@ def main():
 
                 adapter, snapshot = handover(fds[0], interface, log)
                 peer, client = client, None
-                send(peer, {"event": "ready", "phy": adapter.phy, "power_save": snapshot["power_save"]})
+                send(peer, {"event": "ready", "phy": adapter.phy, "mac": snapshot["mac"], "power_save": snapshot["power_save"]})
                 journal.emit("info", "Lease active. Discovery remains available; the radio returns when the main app stops")
             except Exception as exc:
                 journal.emit("error", f"Helper request rejected: {exc}")
+                if snapshot is None and (DATA / "recovery.json").exists():
+                    snapshot = json.loads((DATA / "recovery.json").read_text())
                 try:
                     send(client or peer, {"error": str(exc), "restart_required": snapshot is not None or (DATA / "recovery.json").exists()})
                 except OSError:
@@ -239,7 +311,7 @@ def main():
             server.close()
         if snapshot:
             try:
-                restore(snapshot, journal.emit)
+                restore(snapshot, journal.emit, wait=2)
             except Exception as exc:
                 journal.emit("critical", f"Radio restoration failed: {exc}")
                 return_code = 1
