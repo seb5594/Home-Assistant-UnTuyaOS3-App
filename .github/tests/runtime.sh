@@ -23,6 +23,43 @@ for platform in server.MAGIC:
     assert all(server.firmware_valid(platform, path.read_bytes()) for path in images), platform
 print('PASS: upstream dependencies and persistent UG firmware library')
 PY
+    python - <<'CHECK_TARGET'
+import importlib.util
+from pathlib import Path
+import os
+import sys
+import tempfile
+from hashlib import md5
+from unittest.mock import Mock, patch
+
+spec = importlib.util.spec_from_file_location('patched_ota', '/opt/untuyaos3/scripts/ap-ota.py')
+ota = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = ota
+spec.loader.exec_module(ota)
+peer = Mock()
+with patch.object(ota, 'load_target', return_value='192.168.175.1'), \
+     patch.dict(os.environ, {'UNTUYAOS3_ALLOWED_IFACE': 'wlan-test'}), \
+     patch.object(ota.socket, 'socket', return_value=peer):
+    assert ota._connect_tcp() is peer
+peer.connect.assert_called_once_with(('192.168.175.1', 6668))
+peer.setsockopt.assert_called_once_with(ota.socket.SOL_SOCKET, ota.socket.SO_BINDTODEVICE, b'wlan-test\0')
+with tempfile.TemporaryDirectory() as directory:
+    firmware = Path(directory) / 'test.bin'
+    firmware.write_bytes(b'MMM\0test')
+    app_key = md5(bytes.fromhex('4f 58 4c 76 73 6c 43 76 55 78 63 54 50 4c 47 4f')).digest()
+    unsolicited = ota.Lpv35Frame(type=0x0C, data=b'\0\0\0\0{}').encrypt_and_pack(app_key)
+    peer = Mock()
+    peer.recv.return_value = unsolicited
+    with patch.object(sys, 'argv', ['ap-ota.py', str(firmware), '-v']), patch.object(ota, 'get_socket', return_value=peer):
+        try:
+            ota.main()
+        except RuntimeError as exc:
+            assert '0x0C; expected 0x16' in str(exc), str(exc)
+        else:
+            raise AssertionError('Unexpected AP frame must stop before schema or OTA commands')
+    assert peer.sendall.call_count == 1
+print('PASS: patched OTA uses validated .175 endpoint and stops on unexpected AP response')
+CHECK_TARGET
     python - <<'CHECK_ASSOCIATION'
 import os
 from pathlib import Path

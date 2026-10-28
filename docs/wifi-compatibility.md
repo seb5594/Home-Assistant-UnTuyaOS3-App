@@ -7,7 +7,7 @@ The app uses the **host kernel's drivers and firmware**. Its Python image cannot
 | Adapter / driver | Evidence | Status |
 | --- | --- | --- |
 | Atheros AR9271 / UB91, `0cf3:9271`, `ath9k_htc` | User-confirmed LSC Smart Floor Lamp / T1 flash; HAOS kernel 6.18.52-haos, app 0.2.0-beta.2 | Tested successfully in this setup |
-| Internal Realtek 8822CE, `rtw88_8822ce` | Namespace handover and restoration succeeded; authentication failed at −95 dBm | Not confirmed for flashing in this setup |
+| Internal Realtek 8822CE, `rtw88_8822ce` | Namespace handover, association and DHCP confirmed in later user logs; some other attempts timed out at weak signal | Wi-Fi/DHCP confirmed; successful flash not confirmed |
 | Other adapters below | HAOS kernel configuration, not a hardware flash test | Candidates only; live checks remain required |
 
 ## Drivers configured by HAOS
@@ -40,3 +40,10 @@ If USB enumeration is visible but no WLAN interface exists, reconnect the adapte
 The supplied log records −95 dBm on the internal adapter versus −60 dBm on the successful AR9271. The Realtek stayed in authentication/scanning states and stopped at the bounded association deadline. DHCP was never started. Periodic `1/45`, `6/45`, `11/45` messages are status samples, not an endless DHCP loop.
 
 The helper restored the internal radio's original state at 19:11:27 UTC. Later inventory still listed it, but an unrelated missing `rfkill3/name` prevented eligibility. Version 1.0.0-beta.1 corrects that discovery failure. This does not prove a fix for the Realtek's weak reception; check its antennas and hardware/driver behavior separately. Read-only sysctl and rfkill-control notices also appeared in the successful USB run, so those notices alone do not explain the Realtek failure.
+
+
+## Later device-protocol results
+
+On 28 October 2026, user logs showed successful Wi-Fi association and DHCP with both the internal Realtek and the AR9271 for a 2024 Battletron Lightbar. The device answered request `0x16` with `0x0C`; this is not a successful UnTuyaOS3 device-info exchange, and firmware compatibility is unconfirmed.
+
+A 2024 BK7231N LSC Powerstrip without energy monitoring offered `192.168.175.100/24` from `192.168.175.1`. This was incorrectly rejected by the app's old fixed `.176.1` assumption. Version 1.0.0-beta.3 validates and uses the DHCP-derived endpoint instead. This fixes that app-side networking restriction; a successful powerstrip flash has not been confirmed. The firmware version, rather than year or chip alone, is needed to investigate exploit support.

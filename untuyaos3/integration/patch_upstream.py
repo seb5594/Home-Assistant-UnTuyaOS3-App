@@ -30,6 +30,29 @@ def patch(root):
             raise RuntimeError(f"Upstream context changed: {old}")
         text = text.replace(old, new)
     connect.write_text(text)
+    ota = root / "scripts/ap-ota.py"
+    text = ota.read_text()
+    changes = {
+        'VICTIM_IP = "192.168.176.1"':
+            'sys.path.insert(0, "/opt/webapp")\n'
+            'from ota_target import load_target, expect_frame_type',
+        '    for attempt in range(1, SOCKET_RETRIES + 1):\n        sock = socket.socket':
+            '    target = load_target()\n'
+            '    for attempt in range(1, SOCKET_RETRIES + 1):\n        sock = socket.socket',
+        '            sock.connect((VICTIM_IP, 6668))':
+            '            import os\n'
+            '            interface = os.environ["UNTUYAOS3_ALLOWED_IFACE"]\n'
+            '            sock.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, interface.encode() + b"\\0")\n'
+            '            print(f"Connecting to validated device target {target}:6668 via {interface}")\n'
+            '            sock.connect((target, 6668))',
+    }
+    for expected in ("FRM_AP_CFG_GET_DEV_INFO", "FRM_AP_CFG_SET_DEV_SCHEMA", "FRM_SECURITY_TYPE4"):
+        changes[f"assert frame.type == {expected}"] = f"expect_frame_type(frame, {expected})"
+    for old, new in changes.items():
+        if text.count(old) != 1:
+            raise RuntimeError(f"Upstream OTA context changed: {old}")
+        text = text.replace(old, new)
+    ota.write_text(text)
     (root / "scripts/restore-network.sh").write_text(
         '#!/usr/bin/env bash\nprintf "Adapter cleanup is handled by the Home Assistant app.\\n"\n'
     )

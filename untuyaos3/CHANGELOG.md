@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.0-beta.3
+
+- Accept validated private DHCP subnets such as 192.168.175.0/24 and use their server/router as the OTA endpoint.
+- Replace the upstream fixed .176.1 TCP target with a fresh session record, live address/route validation and binding to the selected Wi-Fi adapter.
+- Reject ambiguous, off-link or overlapping targets; keep device DNS and default routes ignored.
+- Clear DHCP target records on deconfiguration and remove all private session files after a run.
+- Flush and verify only the selected adapter's IPv4/IPv6 addresses and dependent routes during cleanup.
+- Report expected/actual AP protocol responses instead of a bare frame-type assertion; no unsupported-device bypass is added.
+- Add DHCP-to-OTA, stale-session, cleanup and patched-upstream runtime regression tests.
+
 ## 1.0.0-beta.2
 
 - Recover the same USB device by MAC and physical-device identity after PHY renumbering, without touching a different or active adapter.

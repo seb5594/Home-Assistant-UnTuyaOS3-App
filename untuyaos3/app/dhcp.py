@@ -3,34 +3,53 @@ import ipaddress
 import json
 import os
 import sys
+import re
 from wifi import command
+from ota_target import approved_adapter, state_path, store_target, validate_endpoint
+from wifi import same_device
 
 
 def validate_lease(environment, routes):
-    if environment.get("interface") != environment.get("UNTUYAOS3_ALLOWED_IFACE"):
+    return lease_details(environment, routes)[0]
+
+
+def lease_details(environment, routes):
+    name = environment.get("interface", "")
+    if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9_.-]{1,15}", name) or name != environment.get("UNTUYAOS3_ALLOWED_IFACE"):
         raise ValueError("DHCP hook was called for an unapproved interface")
     network = ipaddress.IPv4Interface(environment["ip"] + "/" + environment["subnet"])
-    if network.network.prefixlen < 24 or network.ip in (network.network.network_address, network.network.broadcast_address, ipaddress.IPv4Address("192.168.176.1")) or network.ip.is_loopback or network.ip.is_multicast or network.ip.is_unspecified:
-        raise ValueError("Invalid DHCP address")
-    # Upstream's OTA target is fixed; do not route it through the Supervisor bridge.
-    if ipaddress.IPv4Address("192.168.176.1") not in network.network:
-        raise ValueError("Lease does not reach UnTuyaOS3's 192.168.176.1 target")
+    candidates = set((environment.get("serverid", "") + " " + environment.get("router", "")).split())
+    if not candidates:
+        candidates = {"192.168.176.1"}  # Compatibility only for the original, matching subnet.
+    if len(candidates) != 1:
+        raise ValueError("DHCP server/router does not identify one unambiguous device target")
+    target = str(ipaddress.IPv4Address(candidates.pop()))
+    validate_endpoint(str(network), target)
     for route in routes:
         if route.get("dev") == environment["interface"] or route.get("dst") in (None, "default"):
             continue
         destination = ipaddress.ip_network(route["dst"], strict=False)
         if destination.version == 4 and destination.overlaps(network.network):
             raise ValueError("Device subnet overlaps the app's existing network; refusing lease")
-    return str(network)
+    return str(network), target
 
 
 def main():
     event = sys.argv[1]
-    if event not in ("bound", "renew"):
+    if event not in ("bound", "renew", "deconfig"):
         return
-    lease = validate_lease(os.environ, json.loads(command("ip", "-4", "-j", "route", "show", "table", "all")))
-    print(f"DHCP {event}: {os.environ['interface']} address={lease}; DNS and default route ignored", flush=True)
+    if os.environ.get("interface") != os.environ.get("UNTUYAOS3_ALLOWED_IFACE"):
+        raise ValueError("DHCP hook was called for an unapproved interface")
+    state_path(os.environ).unlink(missing_ok=True)
+    same_device(approved_adapter(os.environ))
+    if event == "deconfig":
+        command("ip", "-4", "address", "flush", "dev", os.environ["interface"])
+        print("DHCP deconfig: cleared this session's address and OTA target", flush=True)
+        return
+    lease, target = lease_details(os.environ, json.loads(command("ip", "-4", "-j", "route", "show", "table", "all")))
     command("ip", "-4", "address", "replace", lease, "dev", os.environ["interface"])
+    store_target(os.environ, lease, target)
+    print(f"DHCP {event}: {os.environ['interface']} address={lease}; OTA target={target}; DNS and default route ignored", flush=True)
 
 
 if __name__ == "__main__":

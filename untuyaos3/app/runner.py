@@ -9,6 +9,8 @@ import signal
 import subprocess
 import threading
 import time
+import tempfile
+import secrets
 from wifi import cleanup, discover, same_device
 from supplicant import Supplicant
 
@@ -16,9 +18,10 @@ ANSI = re.compile(r"\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1b\\))")
 
 
 class Runner:
-    def __init__(self, options, journal, fatal, root="/opt/untuyaos3"):
+    def __init__(self, options, journal, fatal, root="/opt/untuyaos3", runtime="/run"):
         self.options, self.journal, self.fatal = options, journal, fatal
         self.root = Path(root)
+        self.runtime = Path(runtime)
         self.lock = threading.RLock()
         self.state, self.exit_code, self.adapter = "starting", None, None
         self.process, self.master, self.thread = None, None, None
@@ -74,12 +77,14 @@ class Runner:
     def _run(self):
         slave = None
         connection = None
+        session = None
         started, heartbeat, health, terminating = time.monotonic(), time.monotonic(), time.monotonic(), None
         decoder = codecs.getincrementaldecoder("utf-8")("replace")
         try:
             import fcntl
             import struct
             import termios
+            session = tempfile.TemporaryDirectory(prefix="untuya-session-", dir=self.runtime)
             connection = Supplicant(self.adapter, self.options.get("original_power_save"),
                                     self.journal.emit, self.cancelled)
             control_path = connection.start()
@@ -90,6 +95,8 @@ class Runner:
                        UNTUYAOS3_SKIP_INSTALL="1", UNTUYAOS3_ALLOWED_IFACE=self.adapter.name,
                        UNTUYAOS3_ALLOWED_PHY=self.adapter.phy, UNTUYAOS3_ALLOWED_IFINDEX=str(self.adapter.ifindex))
             env["UNTUYAOS3_WPA_CONTROL"] = control_path
+            env["UNTUYAOS3_RUN_DIR"] = session.name
+            env["UNTUYAOS3_RUN_ID"] = secrets.token_hex(16)
             args = ["bash", str(self.root / "UnTuyaOS3.sh"), "--verbose", "--interface", self.adapter.name]
             self.journal.emit("info", "Starting pinned UnTuyaOS3.sh with verbose TX/RX logging")
             with self.lock:
@@ -178,8 +185,20 @@ class Runner:
                         if present:
                             self.fatal.set()
                 if present and not cleanup(self.adapter, self.journal.emit):
-                    self.journal.emit("critical", "Cleanup incomplete; stopping app to release the radio")
-                    self.fatal.set()
+                    try:
+                        same_device(self.adapter)
+                    except Exception:
+                        self.journal.emit("error", "Adapter vanished during cleanup; keeping recovery diagnostics available")
+                    else:
+                        self.journal.emit("critical", "Cleanup incomplete; stopping app to release the radio")
+                        self.fatal.set()
+                if session:
+                    try:
+                        session.cleanup()
+                        self.journal.emit("info", "Removed private session files, including the DHCP-derived OTA target")
+                    except OSError as exc:
+                        self.journal.emit("critical", f"Session file cleanup failed: {exc}")
+                        self.fatal.set()
                 self.process = None
                 self.state = "releasing"
             if self.completed:

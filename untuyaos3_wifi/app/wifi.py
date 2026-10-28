@@ -196,12 +196,31 @@ def cleanup(adapter, log):
     ok = True
     for args in (("iw", "dev", adapter.name, "disconnect"),
                  ("ip", "link", "set", "dev", adapter.name, "down"),
-                 ("ip", "-4", "address", "flush", "dev", adapter.name)):
+                 ("ip", "-4", "address", "flush", "dev", adapter.name),
+                 ("ip", "-6", "address", "flush", "dev", adapter.name),
+                 ("ip", "-4", "route", "flush", "table", "all", "dev", adapter.name),
+                 ("ip", "-6", "route", "flush", "table", "all", "dev", adapter.name)):
         try:
+            same_device(adapter)
             command(*args)
             log("info", "Cleanup: " + " ".join(args))
-        except PreflightError as exc:
+        except (PreflightError, OSError, ValueError, KeyError) as exc:
             log("warning" if args[0] == "iw" else "error", str(exc))
             if args[0] != "iw":
                 ok = False
+    try:
+        same_device(adapter)
+        addresses = json.loads(command("ip", "-j", "address", "show", "dev", adapter.name))
+        if len(addresses) != 1 or addresses[0].get("addr_info") or "UP" in addresses[0].get("flags", []):
+            raise PreflightError("Cleanup verification found remaining addresses or an UP interface")
+        for family in ("-4", "-6"):
+            routes = json.loads(command("ip", family, "-j", "route", "show", "table", "all"))
+            if any(route.get("dev") == adapter.name or any(hop.get("dev") == adapter.name for hop in route.get("nexthops", [])) for route in routes):
+                raise PreflightError("Cleanup verification found remaining routes on the leased adapter")
+        if command("iw", "dev", adapter.name, "link").strip() != "Not connected.":
+            raise PreflightError("Cleanup verification could not confirm disconnection")
+        log("info", "Cleanup verified: selected adapter down, disconnected, no IPv4/IPv6 addresses or dependent routes")
+    except (PreflightError, OSError, ValueError, KeyError) as exc:
+        log("error", f"Cleanup verification failed: {exc}")
+        ok = False
     return ok

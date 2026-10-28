@@ -11,13 +11,14 @@
   <a href="https://paypal.me/seb5594"><img src="https://img.shields.io/static/v1?label=Support&amp;message=PayPal&amp;color=0070BA&amp;logo=paypal&amp;logoColor=white&amp;style=for-the-badge" alt="PayPal" height="40"></a>
   <a href="https://buymeacoffee.com/seb5594"><img src="https://img.shields.io/static/v1?label=Support&amp;message=Buy%20Me%20a%20Coffee&amp;color=FFDD00&amp;logo=buy-me-a-coffee&amp;logoColor=black&amp;style=for-the-badge" alt="Buy Me a Coffee" height="40"></a><br>
   <a href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fseb5594%2FHome-Assistant-Apps"><img src="https://img.shields.io/static/v1?label=Home%20Assistant&amp;message=Add%20app%20repository&amp;color=18BCF2&amp;logo=homeassistant&amp;logoColor=white&amp;style=for-the-badge" alt="Home Assistant" height="28"></a>
-  <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/releases/tag/v1.0.0-beta.2"><img src="https://img.shields.io/static/v1?label=version&amp;message=Beta%202&amp;color=1877A5&amp;style=for-the-badge" alt="version" height="28"></a>
+  <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/releases"><img src="https://img.shields.io/static/v1?label=version&amp;message=Beta%203&amp;color=1877A5&amp;style=for-the-badge" alt="version" height="28"></a>
   <img src="https://img.shields.io/static/v1?label=image%20pulls&amp;message=45&amp;color=1877A5&amp;style=for-the-badge" alt="image pulls" height="28"><br>
   <img src="https://img.shields.io/static/v1?label=arch%20%26%20size&amp;message=amd64%20151.2%20%C2%B7%20aarch64%20165.6%20MiB&amp;color=157F71&amp;style=flat" alt="arch &amp; size" height="20">
   <img src="https://img.shields.io/static/v1?label=stage&amp;message=experimental&amp;color=2F855A&amp;style=flat" alt="stage" height="20">
   <img src="https://img.shields.io/static/v1?label=ingress&amp;message=enabled&amp;color=7C3AED&amp;style=flat" alt="ingress" height="20">
   <img src="https://img.shields.io/static/v1?label=mounts%20%28read-write%29&amp;message=share&amp;color=B45309&amp;style=flat" alt="mounts (read-write)" height="20">
   <img src="https://img.shields.io/static/v1?label=privileged&amp;message=NET_ADMIN%2C%20NET_RAW&amp;color=B45309&amp;style=flat" alt="privileged" height="20"><br>
+  <a href="https://github.com/seb5594/Home-Assistant-Apps/stargazers"><img src="https://img.shields.io/github/stars/seb5594/Home-Assistant-UnTuyaOS3-App?label=stars&amp;style=flat" alt="stars" height="20"></a>
   <a href="https://github.com/seb5594/Home-Assistant-Apps/issues"><img src="https://img.shields.io/github/issues/seb5594/Home-Assistant-UnTuyaOS3-App?label=issues&amp;style=flat" alt="issues" height="20"></a>
   <img src="https://img.shields.io/static/v1?label=runtime%20tests&amp;message=4%20passed&amp;color=2F855A&amp;style=flat" alt="runtime tests" height="20">
   <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/seb5594/Home-Assistant-UnTuyaOS3-App/ci.yml?branch=dev&amp;label=checks&amp;style=flat" alt="checks" height="20"></a>
@@ -101,6 +102,10 @@ The controller uses the [wpa_supplicant control interface](https://w1.fi/wpa_sup
 
 ## Firmware library
 
+DHCP and OTA support both the original `192.168.176.x` network and device APs using another private subnet, such as `192.168.175.x`. The hook accepts one unambiguous on-link DHCP server/router as the device endpoint, rejects overlapping app networks, and writes a private record for the current session. Every OTA TCP connection checks that record, the live address and direct Wi-Fi route, and binds to the approved adapter. No default route or device DNS setting is installed. The historical `.176.1` fallback is allowed only when DHCP omits both endpoint options and the lease actually covers that address.
+
+The DHCP fix does not establish exploit compatibility. For example, `0x0C` in response to device-info request `0x16` means the expected AP protocol response was not received. The app stops before the next protocol stage and prints the expected/actual response types. A BK7231N chip, retail name or manufacturing year alone cannot establish whether a particular firmware supports this exploit. Re-enter AP pairing mode and consult upstream firmware compatibility reports.
+
 Bundled upstream ESPHome Kickstart images are copied to private persistent storage on first startup. Additional UG `.bin` images can be uploaded in the Web UI. Uploads cannot overwrite existing files and are blocked during a run. Limits are 32 MiB per file and 30 files per platform.
 
 | Platform | Required UG signature |
@@ -114,6 +119,8 @@ Format checks do not establish authenticity or device compatibility. Flashing ca
 The initial device-AP scan now has a **90-second deadline**. If no matching open AP is found, the run stops before DHCP. Adapter disappearance is checked during scanning and throughout a run; no device-wide reconnect loop is used.
 
 ## Logs and recovery
+
+Cleanup terminates the session processes and private supplicant, restores power saving, and removes only the selected adapter's IPv4/IPv6 addresses and dependent routes. It verifies that the adapter is down and disconnected, with no retained addresses/routes, before completing the cleanup phase. Session files, including the DHCP-derived OTA target, are removed on success, cancellation and failure. A later session receives a new private directory and identity; an old DHCP target cannot be reused.
 
 The console shows live PTY output. The separate activity panel includes timestamped diagnostics, driver events and all script output. Ten-second heartbeats indicate that the script is waiting for input, an AP or protocol output.
 

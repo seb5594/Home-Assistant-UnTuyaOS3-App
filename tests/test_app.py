@@ -439,7 +439,7 @@ class PtyTests(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()):
             journal = Journal(root / "logs")
         self.addCleanup(journal.close)
-        runner = Runner({"interface": "wlan1", "run_timeout": timeout}, journal, threading.Event(), root)
+        runner = Runner({"interface": "wlan1", "run_timeout": timeout}, journal, threading.Event(), root, runtime=root)
         runner.adapter = wifi.Adapter("wlan1", "phy0", 4)
         runner.state = "ready"
         mocks = [
@@ -472,6 +472,7 @@ class PtyTests(unittest.TestCase):
         output = "".join(e["text"] for e in journal.snapshot(0)["events"] if e["channel"] == "terminal")
         self.assertIn("selected=2", output)
         self.assertIn("diagnostic", output)
+        self.assertFalse(list(runner.runtime.glob("untuya-session-*")))
 
     def test_timeout_and_repeated_start_exclusion(self):
         runner, _ = self.run_script('sleep 20\n', timeout=0.3)
@@ -480,6 +481,7 @@ class PtyTests(unittest.TestCase):
         runner.thread.join(8)
         self.assertEqual(runner.state, "cancelled")
         self.assertIsNone(runner.process)
+        self.assertFalse(list(runner.runtime.glob("untuya-session-*")))
 
     def test_hardware_disappearance_stops_run_without_killing_ingress(self):
         from unittest.mock import Mock
