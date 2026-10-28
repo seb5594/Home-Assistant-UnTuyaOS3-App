@@ -2,7 +2,7 @@
 <h1 align="center">UnTuyaOS3</h1>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/seb5594/Home-Assistant-UnTuyaOS3-App/main/untuyaos3/logo.png" alt="UnTuyaOS3" width="360" height="129">
+  <img src="https://raw.githubusercontent.com/seb5594/Home-Assistant-UnTuyaOS3-App/dev/untuyaos3/logo.png" alt="UnTuyaOS3" width="360" height="129">
 </p>
 
 ---
@@ -11,16 +11,16 @@
   <a href="https://paypal.me/seb5594"><img src="https://img.shields.io/static/v1?label=Support&amp;message=PayPal&amp;color=0070BA&amp;logo=paypal&amp;logoColor=white&amp;style=for-the-badge" alt="PayPal" height="40"></a>
   <a href="https://buymeacoffee.com/seb5594"><img src="https://img.shields.io/static/v1?label=Support&amp;message=Buy%20Me%20a%20Coffee&amp;color=FFDD00&amp;logo=buy-me-a-coffee&amp;logoColor=black&amp;style=for-the-badge" alt="Buy Me a Coffee" height="40"></a><br>
   <a href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fseb5594%2FHome-Assistant-Apps"><img src="https://img.shields.io/static/v1?label=Home%20Assistant&amp;message=Add%20app%20repository&amp;color=18BCF2&amp;logo=homeassistant&amp;logoColor=white&amp;style=for-the-badge" alt="Home Assistant" height="28"></a>
-  <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/releases/tag/v1.0.0"><img src="https://img.shields.io/static/v1?label=version&amp;message=v1.0.0&amp;color=1877A5&amp;style=for-the-badge" alt="version" height="28"></a>
+  <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/releases/tag/v1.0.0"><img src="https://img.shields.io/static/v1?label=version&amp;message=1.0.0&amp;color=1877A5&amp;style=for-the-badge" alt="version" height="28"></a>
   <img src="https://img.shields.io/static/v1?label=image%20pulls&amp;message=45&amp;color=1877A5&amp;style=for-the-badge" alt="image pulls" height="28"><br>
-  <img src="https://img.shields.io/static/v1?label=arch%20%26%20size&amp;message=amd64%20151.2%20%C2%B7%20aarch64%20165.6%20MiB&amp;color=157F71&amp;style=flat" alt="arch &amp; size" height="20">
+  <img src="https://img.shields.io/static/v1?label=arch%20%26%20size&amp;message=amd64%20151.2%20%C2%B7%20aarch64%20165.7%20MiB&amp;color=157F71&amp;style=flat" alt="arch &amp; size" height="20">
   <img src="https://img.shields.io/static/v1?label=stage&amp;message=stable&amp;color=2F855A&amp;style=flat" alt="stage" height="20">
   <img src="https://img.shields.io/static/v1?label=ingress&amp;message=enabled&amp;color=7C3AED&amp;style=flat" alt="ingress" height="20">
   <img src="https://img.shields.io/static/v1?label=mounts%20%28read-write%29&amp;message=share&amp;color=B45309&amp;style=flat" alt="mounts (read-write)" height="20">
   <img src="https://img.shields.io/static/v1?label=privileged&amp;message=NET_ADMIN%2C%20NET_RAW&amp;color=B45309&amp;style=flat" alt="privileged" height="20"><br>
   <a href="https://github.com/seb5594/Home-Assistant-Apps/issues"><img src="https://img.shields.io/github/issues/seb5594/Home-Assistant-UnTuyaOS3-App?label=issues&amp;style=flat" alt="issues" height="20"></a>
   <img src="https://img.shields.io/static/v1?label=runtime%20tests&amp;message=6%20passed&amp;color=2F855A&amp;style=flat" alt="runtime tests" height="20">
-  <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/seb5594/Home-Assistant-UnTuyaOS3-App/ci.yml?branch=main&amp;label=checks&amp;style=flat" alt="checks" height="20"></a>
+  <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/seb5594/Home-Assistant-UnTuyaOS3-App/ci.yml?branch=dev&amp;label=checks&amp;style=flat" alt="checks" height="20"></a>
   <a href="https://github.com/seb5594/Home-Assistant-Apps#license"><img src="https://img.shields.io/github/license/seb5594/Home-Assistant-UnTuyaOS3-App?label=license&amp;style=flat" alt="license" height="20"></a>
 </p>
 <!-- header:end -->
