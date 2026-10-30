@@ -1,24 +1,47 @@
 name: Configure standalone app workflows
 on:
   workflow_dispatch:
+    inputs:
+      public_keys:
+        description: Public GitHub Actions encryption keys of the two destination repositories
+        type: string
+        required: true
 permissions:
   contents: read
 jobs:
   configure:
     runs-on: ubuntu-latest
     steps:
-      - name: Give the two standalone apps the existing orchestration connection
+      - name: Prepare sealed-box encryption
+        shell: bash
+        run: python -m pip install --target "$RUNNER_TEMP/sealed-box" PyNaCl==1.5.0
+      - name: Encrypt the existing orchestration connection for each destination
         env:
-          GH_TOKEN: ${{ secrets.ORCHESTRATION_PAT }}
+          ORCHESTRATION_TOKEN: ${{ secrets.ORCHESTRATION_PAT }}
+          PUBLIC_KEYS: ${{ inputs.public_keys }}
         shell: bash
         run: |
-          python - <<'PY'
-          import os, subprocess
-          token = os.environ['GH_TOKEN']
+          PYTHONPATH="$RUNNER_TEMP/sealed-box" python - <<'PY'
+          import base64, json, os
+          from nacl.public import PublicKey, SealedBox
+          token = os.environ['ORCHESTRATION_TOKEN']
           if not token:
               raise SystemExit('ORCHESTRATION_PAT is missing')
-          for name in ('Home-Assistant-WiFi-Helper-App', 'Home-Assistant-Tuya-Breaker-App'):
-              subprocess.run(['gh', 'secret', 'set', 'ORCHESTRATION_PAT', '--repo', 'seb5594/' + name],
-                             input=token, text=True, check=True)
-              print('Configured private engine access for ' + name)
+          keys = json.loads(os.environ['PUBLIC_KEYS'])
+          allowed = {'Home-Assistant-WiFi-Helper-App', 'Home-Assistant-Tuya-Breaker-App'}
+          if set(keys) != allowed:
+              raise SystemExit('Only the two standalone app repositories are allowed')
+          sealed = {}
+          for name, info in keys.items():
+              public = PublicKey(base64.b64decode(info['key']))
+              ciphertext = SealedBox(public).encrypt(token.encode())
+              sealed[name] = {'key_id': info['key_id'], 'encrypted_value': base64.b64encode(ciphertext).decode()}
+          with open('sealed-secrets.json', 'w') as output:
+              json.dump(sealed, output)
+          print('Sealed credentials for both destination repositories')
           PY
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sealed-orchestration-connection
+          path: sealed-secrets.json
+          retention-days: 1
