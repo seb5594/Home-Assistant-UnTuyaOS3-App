@@ -31,7 +31,7 @@ More background, and the list of drivers HAOS builds, is in [wifi-compatibility.
 
 The easiest way is the **Report a device** button at the bottom of the app's Web UI. It opens the device report form on GitHub with the app version, your Wi-Fi adapter and the kernel already filled in.
 
-You can also [open the form directly](https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/issues/new?template=device-report.yml). It asks for:
+You can also [open the form directly](https://github.com/seb5594/Home-Assistant-Anti-Tuya-Apps/issues/new?template=device-report.yml). It asks for:
 
 - the device and where it comes from (brand, product name, article number),
 - the chip or platform you chose in the menu,

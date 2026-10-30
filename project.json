@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0-beta.1",
+  "version": "1.1.0-beta.2",
   "protocol": 3,
   "base_image": "ghcr.io/home-assistant/base-python:3.13-alpine3.24@sha256:c7d34ae22a87275d46deb65bcb0511b389d7bc6eb8dccb28d44dd7cb8616e603",
   "upstream_repository": "tuya-cloudcutter/UnTuyaOS3",
@@ -33,7 +33,7 @@
     "ca-certificates"
   ],
   "common_config": {
-    "url": "https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App",
+    "url": "https://github.com/seb5594/Home-Assistant-Anti-Tuya-Apps",
     "arch": [
       "amd64",
       "aarch64"
@@ -89,8 +89,8 @@
     },
     "untuyaos3_wifi": {
       "config": {
-        "name": "UnTuyaOS3 Wi-Fi Helper",
-        "description": "Companion of UnTuyaOS3: hands one idle Wi-Fi adapter to the main app and takes it back afterwards",
+        "name": "Anti Tuya WiFi Helper",
+        "description": "Shared companion for UnTuyaOS3 and Tuya Breaker: isolates one idle Wi-Fi radio and restores its host settings after each session",
         "timeout": 60,
         "host_network": true,
         "host_dbus": true,

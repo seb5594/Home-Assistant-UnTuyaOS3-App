@@ -18,6 +18,7 @@ const JOBS = [
 (async () => {
   const browser = await chromium.launch(process.env.PLAYWRIGHT_CHANNEL ? {channel: process.env.PLAYWRIGHT_CHANNEL} : {});
   for (const [source, target, width, height] of JOBS) {
+    if (process.argv.includes("--helper-only") && !source.includes("helper")) continue;
     if (process.argv.includes("--breaker-only") && !source.includes("breaker")) continue;
     const svg = fs.readFileSync(path.join("assets/branding", source), "utf8")
       .replace("<svg ", `<svg width="${width}" height="${height}" `);

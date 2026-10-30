@@ -21,7 +21,7 @@ Two apps cost some convenience, which is why the main app does a lot to hide it:
 
 ## The two apps at a glance
 
-| Access | UnTuyaOS3 (main app) | UnTuyaOS3 Wi-Fi Helper |
+| Access | UnTuyaOS3 (main app) | Anti Tuya WiFi Helper |
 | --- | --- | --- |
 | Network | Isolated container namespace | Host network, needed to hand over the radio |
 | Capabilities | `NET_ADMIN`, `NET_RAW`, but only inside its own namespace | `NET_ADMIN` |

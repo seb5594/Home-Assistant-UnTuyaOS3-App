@@ -10,7 +10,7 @@ const STATIC = "untuyaos3/app/static";
 const PLACEHOLDERS = {
   CSRF: "demo", VERSION: "1.0.0", REPORT_URL: "https://example.invalid/", HELPER_URL: "https://example.invalid/",
   UPSTREAM_URL: "https://github.com/tuya-cloudcutter/UnTuyaOS3", UPSTREAM_REVISION: "2111458",
-  UPSTREAM_COMMIT_URL: "https://github.com/tuya-cloudcutter/UnTuyaOS3", REPOSITORY_URL: "https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App"
+  UPSTREAM_COMMIT_URL: "https://github.com/tuya-cloudcutter/UnTuyaOS3", REPOSITORY_URL: "https://github.com/seb5594/Home-Assistant-Anti-Tuya-Apps"
 };
 const BASE = {state: "select_adapter", exit_code: null, adapter: null, events: [], cursor: 0, generation: "demo",
   selection_locked: false, adapter_busy: false, adapter_error: "", recovery_pending: "", selected_adapter: null,

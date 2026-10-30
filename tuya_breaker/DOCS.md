@@ -2,11 +2,11 @@
 
 **Flashing or changing a device's cloud configuration can permanently brick it or make the stock app unusable. Use this tool at your own risk. A successful exploit, a transfer and a working device are different results. The new CloudCutter integration has software/container coverage, but has not yet been tested on a physical device.**
 
-Tuya Breaker brings UnTuyaOS3 and classic Tuya CloudCutter into one Home Assistant Ingress UI. The original UnTuyaOS3 app remains available separately. Use only one of these main apps at a time. The same **UnTuyaOS3 Wi-Fi Helper** serves either app; it owns one radio lease at a time.
+Tuya Breaker brings UnTuyaOS3 and classic Tuya CloudCutter into one Home Assistant Ingress UI. The original UnTuyaOS3 app remains available separately. Use only one of these main apps at a time. The same **Anti Tuya WiFi Helper** serves either app; it owns one radio lease at a time.
 
 ## Install and prepare
 
-1. Install Tuya Breaker and UnTuyaOS3 Wi-Fi Helper from this repository.
+1. Install Tuya Breaker and Anti Tuya WiFi Helper from this repository.
 2. Enter the same pairing secret of at least 32 characters in their Home Assistant **Configuration** tabs. The Web UI can generate one.
 3. Keep Protection mode and AppArmor enabled. Start the helper, then Tuya Breaker, and open its Web UI.
 4. Select an idle AP-capable Wi-Fi adapter. Home Assistant must use another connection, preferably Ethernet. Both USB and internal adapters depend on the HAOS driver and firmware.

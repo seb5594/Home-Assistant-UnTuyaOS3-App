@@ -1,4 +1,4 @@
-# UnTuyaOS3 Wi-Fi Helper
+# Anti Tuya WiFi Helper
 
 This is the small companion of the **UnTuyaOS3** app. It hands one idle Wi-Fi radio to that app and takes it back afterwards. It has no web page of its own: open the UnTuyaOS3 Web UI to pick an adapter and to see what the helper is doing.
 
@@ -12,7 +12,7 @@ If there is no Wi-Fi interface on the host at all, the helper stops right away a
 
 ## What it does and does not do
 
-It needs the host network and D-Bus, because moving a radio between network namespaces cannot be done any other way. That is why it is a separate app: the web UI and the upstream scripts never get these rights. It has no web server, no shell and no access to your Home Assistant configuration. See the [architecture notes](https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/blob/main/docs/architecture.md) for the details. Keep Protection mode and AppArmor on.
+It needs the host network and D-Bus, because moving a radio between network namespaces cannot be done any other way. That is why it is a separate app: the web UI and the upstream scripts never get these rights. It has no web server, no shell and no access to your Home Assistant configuration. See the [architecture notes](https://github.com/seb5594/Home-Assistant-Anti-Tuya-Apps/blob/main/docs/architecture.md) for the details. Keep Protection mode and AppArmor on.
 
 Use Ethernet for Home Assistant itself. Busy, blocked or unsupported adapters are refused with a reason, and a working connection is never disconnected to free one.
 

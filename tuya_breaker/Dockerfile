@@ -22,7 +22,7 @@ COPY integration/patch_cloudcutter.py /tmp/patch_cloudcutter.py
 RUN python /tmp/patch_cloudcutter.py /cloudcutter
 
 FROM ${BUILD_FROM}
-ARG BUILD_VERSION=1.1.0-beta.1
+ARG BUILD_VERSION=1.1.0-beta.2
 ARG BUILD_ARCH=amd64
 RUN apk add --no-cache bash=5.3.9-r1 iw=6.17-r0 iproute2=7.0.0-r0 busybox=1.37.0-r31 tini=0.19.0-r3 wpa_supplicant=2.11-r4 hostapd=2.11-r4 dnsmasq=2.92_p2-r0 mosquitto=2.1.2-r1 nftables=1.1.6-r1
 COPY --from=build /opt/venv /opt/venv

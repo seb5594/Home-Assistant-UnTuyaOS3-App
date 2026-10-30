@@ -1,12 +1,12 @@
 <h1 align="center">UnTuyaOS3 für Home Assistant</h1>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/seb5594/Home-Assistant-UnTuyaOS3-App/main/untuyaos3/logo.png" alt="UnTuyaOS3" width="360" height="129">
+  <img src="https://raw.githubusercontent.com/seb5594/Home-Assistant-Anti-Tuya-Apps/main/untuyaos3/logo.png" alt="UnTuyaOS3" width="360" height="129">
 </p>
 
 <p align="center">
-  <a href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fseb5594%2FHome-Assistant-UnTuyaOS3-App"><img src="https://img.shields.io/static/v1?label=Home%20Assistant&amp;message=Repository%20hinzuf%C3%BCgen&amp;color=18BCF2&amp;logo=homeassistant&amp;logoColor=white&amp;style=for-the-badge" alt="Repository hinzufügen" height="28"></a>
-  <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/releases/latest"><img src="https://img.shields.io/github/v/release/seb5594/Home-Assistant-UnTuyaOS3-App?style=for-the-badge&amp;color=1877A5" alt="Version" height="28"></a>
+  <a href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fseb5594%2FHome-Assistant-Anti-Tuya-Apps"><img src="https://img.shields.io/static/v1?label=Home%20Assistant&amp;message=Repository%20hinzuf%C3%BCgen&amp;color=18BCF2&amp;logo=homeassistant&amp;logoColor=white&amp;style=for-the-badge" alt="Repository hinzufügen" height="28"></a>
+  <a href="https://github.com/seb5594/Home-Assistant-Anti-Tuya-Apps/releases/latest"><img src="https://img.shields.io/github/v/release/seb5594/Home-Assistant-Anti-Tuya-Apps?style=for-the-badge&amp;color=1877A5" alt="Version" height="28"></a>
 </p>
 
 ---
@@ -79,8 +79,8 @@ Eingebautes PCIe-WLAN ist ebenfalls abgedeckt (Intel `iwlwifi`, Atheros, MediaTe
 
 ## Installation
 
-1. In Home Assistant **Einstellungen → Apps → App-Store** öffnen, dann **⋮ → Repositories** und `https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App` hinzufügen. (Ältere Versionen nennen das *Add-ons*.)
-2. **Beide** Apps installieren: **UnTuyaOS3** und **UnTuyaOS3 Wi-Fi Helper**. Zwei Apps sind Absicht, [hier steht warum](docs/architecture.md#why-two-apps) (englisch).
+1. In Home Assistant **Einstellungen → Apps → App-Store** öffnen, dann **⋮ → Repositories** und `https://github.com/seb5594/Home-Assistant-Anti-Tuya-Apps` hinzufügen. (Ältere Versionen nennen das *Add-ons*.)
+2. **Beide** Apps installieren: **UnTuyaOS3** und **Anti Tuya WiFi Helper**. Zwei Apps sind Absicht, [hier steht warum](docs/architecture.md#why-two-apps) (englisch).
 3. Ein Kopplungsgeheimnis mit mindestens 32 Zeichen wählen und in den **Konfigurations**-Tabs beider Apps denselben Wert eintragen. Kein gutes zur Hand? Öffne zuerst die Web-Oberfläche der Haupt-App, drück auf **Generate pairing secret** und füge das Ergebnis in beide ein.
 4. **Schutzmodus** und AppArmor angeschaltet lassen. Den Helper starten, im Log auf *Ready* warten, dann die Haupt-App starten und **Web-UI öffnen** drücken.
 
@@ -111,7 +111,7 @@ Das Schließen des Browsers bricht die Sitzung nicht ab, beim Wiederkommen wird 
 
 ## Hilf bei der Kompatibilitätsliste
 
-Welche Geräte, Chips und Adapter funktionieren, weiß man nur, weil Leute es ausprobieren. Wenn du etwas geflasht hast (oder daran gescheitert bist), sag es mir. Der Button **Report a device** unten in der Web-Oberfläche öffnet ein Formular, in dem App-Version und Adapter schon eingetragen sind. Du kannst das [Formular auch direkt öffnen](https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/issues/new?template=device-report.yml). Fehlschläge sind genauso nützlich wie Erfolge. Bitte lass Schlüssel, UUIDs und Geräte-IDs weg, das Issue ist öffentlich.
+Welche Geräte, Chips und Adapter funktionieren, weiß man nur, weil Leute es ausprobieren. Wenn du etwas geflasht hast (oder daran gescheitert bist), sag es mir. Der Button **Report a device** unten in der Web-Oberfläche öffnet ein Formular, in dem App-Version und Adapter schon eingetragen sind. Du kannst das [Formular auch direkt öffnen](https://github.com/seb5594/Home-Assistant-Anti-Tuya-Apps/issues/new?template=device-report.yml). Fehlschläge sind genauso nützlich wie Erfolge. Bitte lass Schlüssel, UUIDs und Geräte-IDs weg, das Issue ist öffentlich.
 
 ## Sicherheit in Kürze
 
@@ -141,3 +141,7 @@ Alle meine Projekte entstehen in meiner Freizeit, aus Spaß an der Sache. Trotzd
 ## Lizenz
 
 [MIT](LICENSE).
+
+## Gemeinsames App-Repository
+
+Das Projekt heißt jetzt **Home Assistant Anti Tuya Apps**. Im [Hauptkatalog](https://github.com/seb5594/Home-Assistant-Apps) erscheinen **Tuya Breaker (Experimental)**, **UnTuyaOS3** und **Anti Tuya WiFi Helper** jeweils separat. Den Helper nur einmal installieren und jeweils eine der beiden Haupt-Apps starten. Seine technische Kennung bleibt für bestehende Installationen und Wiederherstellungsdaten erhalten.

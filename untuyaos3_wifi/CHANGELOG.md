@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0-beta.2
+
+- Move project links to Home-Assistant-Anti-Tuya-Apps.
+- Rename the shared companion to Anti Tuya WiFi Helper, preserving its installed slug and recovery data.
+- Publish separate app descriptions and documentation in the Home Assistant Apps catalog.
+
 ## 1.1.0-beta.1
 
 - Bundle the existing helper with Tuya Breaker as well as UnTuyaOS3. Both clients use the same authenticated protocol and the helper still permits only one active radio lease.

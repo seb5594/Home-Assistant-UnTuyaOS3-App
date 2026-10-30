@@ -1,7 +1,7 @@
 {
-  "version": "1.1.0-beta.1",
+  "version": "1.1.0-beta.2",
   "protocol": 3,
   "upstream_revision": "2111458225c269ddddf5353bf09a1e8f1096d959",
   "upstream_repository": "tuya-cloudcutter/UnTuyaOS3",
-  "repository_url": "https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App"
+  "repository_url": "https://github.com/seb5594/Home-Assistant-Anti-Tuya-Apps"
 }
