@@ -1,0 +1,24 @@
+name: Configure standalone app workflows
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  configure:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Give the two standalone apps the existing orchestration connection
+        env:
+          GH_TOKEN: ${{ secrets.ORCHESTRATION_PAT }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, subprocess
+          token = os.environ['GH_TOKEN']
+          if not token:
+              raise SystemExit('ORCHESTRATION_PAT is missing')
+          for name in ('Home-Assistant-WiFi-Helper-App', 'Home-Assistant-Tuya-Breaker-App'):
+              subprocess.run(['gh', 'secret', 'set', 'ORCHESTRATION_PAT', '--repo', 'seb5594/' + name],
+                             input=token, text=True, check=True)
+              print('Configured private engine access for ' + name)
+          PY
