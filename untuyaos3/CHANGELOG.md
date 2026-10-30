@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.0-beta.1
+
+- Shared bundle release with Lightleak added to Tuya Breaker; original UnTuyaOS3 and helper behavior preserved.
+
 ## 1.1.0-beta.2
 
 - Move project links to Home-Assistant-Anti-Tuya-Apps.

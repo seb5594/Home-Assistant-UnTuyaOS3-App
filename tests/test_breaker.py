@@ -197,6 +197,21 @@ class BreakerHttpTests(unittest.TestCase):
             self.assertNotIn(b'private-password',body)
             self.assertNotIn(b'private-network',body)
 
+    def test_lightleak_downloads_require_ingress_and_changes_require_csrf(self):
+        self.assertEqual(self.request('GET','/api/lightleak')[0],403)
+        self.assertEqual(self.request('GET','/api/lightleak/backups/'+'a'*32)[0],403)
+        with patch.object(BreakerHandler,'trusted',return_value=True):
+            code,body=self.request('GET','/api/lightleak')
+            self.assertEqual(code,200)
+            self.assertEqual(len(json.loads(body)['variants']),13)
+            self.assertEqual(json.loads(body)['backups'],[])
+            value={'variant':'lightleak-bk7231t','ap_mode':'linux','understand_writes':True}
+            self.assertEqual(self.request('POST','/api/lightleak/configure',value,token=False)[0],403)
+            self.assertIsNone(self.runner.lightleak_settings)
+            self.assertEqual(self.request('POST','/api/lightleak/configure',value)[0],200)
+            self.runner.state='releasing'
+            self.assertEqual(self.request('POST','/api/lightleak/backups/delete',{'id':'a'*32})[0],400)
+
 
 if __name__ == '__main__':
     unittest.main()

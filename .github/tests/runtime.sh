@@ -234,3 +234,24 @@ with tempfile.TemporaryDirectory() as directory:
 print('PASS: actual CloudCutter Flash/Detach servers start, bind only approved IP, and expose firmware only in Flash mode')
 CHECK_EMBEDDED_SERVERS
 fi
+
+if [[ -f /opt/webapp/lightleak_protocol.py ]]; then
+    python - <<'CHECK_LIGHTLEAK'
+from lightleak_protocol import Assets, parse_response, words
+from lightleak_session import custom_ap_packet, psk
+import lightleak_session
+import zlib
+assets=Assets()
+assert str(lightleak_session.NETWORK)=='10.0.0.0/24'
+assert len(assets.variants)==13
+for variant in assets.variants.values():
+    steps=list(variant.setup(assets.binary(variant,'proper')))
+    assert all(len(data)==256 for label,data in steps)
+    assert len(variant.callback())==256
+    assert len(variant.read(0,8,1234,'192.168.176.100'))==256
+    assert len(custom_ap_packet(assets.binary(variant,'stager')))==109
+assert parse_response(words(1,zlib.crc32(b'test'))+b'test',1)==b'test'
+assert psk(b'password','IEEE')=='f42c6fc52df0ebef9ebb4b90b38a5f902e83fe1b135a70e23aed762e9710a12e'
+print('PASS: Lightleak pinned payloads, all 13 variants, complete packet layouts and binary WPA key derivation')
+CHECK_LIGHTLEAK
+fi

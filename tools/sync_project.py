@@ -61,7 +61,9 @@ def outputs(root=ROOT):
         info = dict(build_info)
         if slug == "tuya_breaker":
             info.update(cloudcutter_repository=spec["cloudcutter_repository"],
-                        cloudcutter_revision=spec["cloudcutter_revision"])
+                        cloudcutter_revision=spec["cloudcutter_revision"],
+                        lightleak_repository=spec["lightleak_repository"],
+                        lightleak_revision=spec["lightleak_revision"])
         files[f"{slug}/app/build_info.json"] = json.dumps(info, indent=2) + "\n"
         for source in sorted((root / "shared").glob("*.py")):
             files[f"{slug}/app/{source.name}"] = render_shared_module(source)
@@ -84,10 +86,12 @@ def outputs(root=ROOT):
         tools_page = (root / 'tuya_breaker/ui/tools.html').read_text(encoding='utf-8')
         tools_page = tools_page.replace('<!-- HARDWARE_EXPLORER -->', (root/'tuya_breaker/ui/hardware.html').read_text(encoding='utf-8'))
         page = page.replace('<main>', '<main>\n' + tools_page)
-        page = page.replace('</head>', '<script src="breaker.js" defer></script><script src="hardware.js" defer></script></head>')
+        page = page.replace('</head>', '<script src="breaker.js" defer></script><script src="lightleak.js" defer></script><script src="hardware.js" defer></script></head>')
         page = page.replace('<h2>UnTuyaOS3 console</h2>', '<h2>Session console</h2>')
+        page = page.replace('<div class="preparation-body"><p>', '<div class="preparation-body"><p id="preparation-help">')
+        page = page.replace('<p class="hint">Kickstart starts', '<p id="kickstart-help" class="hint">Kickstart starts')
         page = page.replace('<option>T1</option>', '<option>T1</option><option>BK7231T</option><option>RTL8710BN</option>')
-        page = page.replace('Give compatible Tuya devices a new beginning.', 'UnTuyaOS3 and Tuya CloudCutter, together in Home Assistant.')
+        page = page.replace('Give compatible Tuya devices a new beginning.', 'UnTuyaOS3, Lightleak and Tuya-Cloudcutter in Home Assistant.')
         files["tuya_breaker/app/static/index.html"] = page
         files["tuya_breaker/integration/patch_upstream.py"] = (root / "untuyaos3/integration/patch_upstream.py").read_text(encoding="utf-8")
         files["tuya_breaker/integration/dhcp.sh"] = (root / "untuyaos3/integration/dhcp.sh").read_text(encoding="utf-8")

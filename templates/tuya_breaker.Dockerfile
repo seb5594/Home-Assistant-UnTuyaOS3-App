@@ -33,14 +33,16 @@ COPY --from=build /cloudcutter/custom-firmware/OpenRTL8710B_UG_1.18.225.img /opt
 COPY --from=build /cloudcutter/src /opt/cloudcutter/src
 COPY --from=build /cloudcutter/device-profiles/schema /opt/cloudcutter/device-profiles/schema
 COPY --from=build /cloudcutter/LICENSE /opt/cloudcutter/LICENSE
+COPY lightleak/ /opt/lightleak/
 COPY app/ /opt/webapp/
+RUN python -c 'import sys; sys.path.insert(0,"/opt/webapp"); from lightleak_protocol import Assets; a=Assets(); assert len(a.variants)==13; [list(v.setup(a.binary(v,"proper"))) for v in a.variants.values()]'
 COPY integration/dhcp.sh /opt/webapp/dhcp.sh
 COPY run.sh /run.sh
 RUN chmod 755 /opt/webapp/dhcp.sh /run.sh
 ENV PATH=/opt/venv/bin:$PATH PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 UNTUYAOS3_SKIP_INSTALL=1
 WORKDIR /opt/webapp
-LABEL io.hass.name="Tuya Breaker" io.hass.description="Experimental UnTuyaOS3 and CloudCutter workspace" \
+LABEL io.hass.name="Tuya Breaker" io.hass.description="Experimental UnTuyaOS3, Lightleak and CloudCutter workspace" \
     io.hass.type="addon" io.hass.version="${BUILD_VERSION}" io.hass.arch="${BUILD_ARCH}" \
-    org.opencontainers.image.source="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App"
+    org.opencontainers.image.source="https://github.com/seb5594/Home-Assistant-Anti-Tuya-Apps"
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["/run.sh"]

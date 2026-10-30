@@ -24,13 +24,24 @@ class BreakerHandler(server.Handler):
 
     def do_GET(self):
         path = urlsplit(self.path).path
+        backup = re.fullmatch(r'/api/lightleak/backups/([0-9a-f]{32})',path)
         hardware_detail = re.fullmatch(r'/api/cloudcutter/hardware/([0-9a-f]{20})',path)
-        if path not in ('/breaker.js', '/hardware.js', '/api/cloudcutter/catalogue', '/api/cloudcutter/credentials', '/api/cloudcutter/hardware') and not hardware_detail:
+        if path not in ('/breaker.js', '/hardware.js', '/lightleak.js', '/api/lightleak', '/api/cloudcutter/catalogue', '/api/cloudcutter/credentials', '/api/cloudcutter/hardware') and not hardware_detail and not backup:
             return super().do_GET()
         if not self.trusted():
             return
-        if path in ('/breaker.js','/hardware.js'):
+        if path in ('/breaker.js','/hardware.js','/lightleak.js'):
             return self.reply(200, (server.STATIC/path[1:]).read_bytes(), 'text/javascript; charset=utf-8')
+        if path == '/api/lightleak':
+            runner=self.server.runner
+            return self.reply(200,{'variants':[{'slug':v.slug,'name':v.name,'chip':v.chip}
+                                    for v in runner.lightleak.variants.values()], 'backups':runner.backup_files()})
+        if backup:
+            try:
+                file=self.server.runner.backup_file(backup[1])
+                return self.reply(200,file.read_bytes(),'application/octet-stream')
+            except (OSError,ValueError):
+                return self.reply(404,{'error':'Complete backup unavailable'})
         if path == '/api/cloudcutter/hardware' or hardware_detail:
             try:
                 result = self.server.runner.hardware.detail(hardware_detail[1]) if hardware_detail else self.server.runner.hardware.snapshot()
@@ -48,7 +59,7 @@ class BreakerHandler(server.Handler):
 
     def do_POST(self):
         path = urlsplit(self.path).path
-        if path not in ('/api/tool', '/api/cloudcutter/catalogue/refresh', '/api/cloudcutter/device', '/api/cloudcutter/configure', '/api/cloudcutter/hardware/refresh'):
+        if path not in ('/api/lightleak/configure', '/api/lightleak/backups/delete', '/api/tool', '/api/cloudcutter/catalogue/refresh', '/api/cloudcutter/device', '/api/cloudcutter/configure', '/api/cloudcutter/hardware/refresh'):
             return super().do_POST()
         if not self.trusted():
             return
@@ -67,6 +78,10 @@ class BreakerHandler(server.Handler):
                     raise ValueError('Wait for adapter return')
                 if path == '/api/tool':
                     self.server.runner.choose_tool(value.get('tool'))
+                elif path == '/api/lightleak/configure':
+                    self.server.runner.configure_lightleak(value)
+                elif path == '/api/lightleak/backups/delete':
+                    self.server.runner.delete_backup(value.get('id'))
                 elif path == '/api/cloudcutter/hardware/refresh':
                     self.server.journal.emit('info','Refreshing the official OpenBeken hardware database')
                     result = self.server.runner.hardware.snapshot(refresh=True)

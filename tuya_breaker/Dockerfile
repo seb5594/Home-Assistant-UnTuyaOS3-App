@@ -22,7 +22,7 @@ COPY integration/patch_cloudcutter.py /tmp/patch_cloudcutter.py
 RUN python /tmp/patch_cloudcutter.py /cloudcutter
 
 FROM ${BUILD_FROM}
-ARG BUILD_VERSION=1.1.0-beta.2
+ARG BUILD_VERSION=1.2.0-beta.1
 ARG BUILD_ARCH=amd64
 RUN apk add --no-cache bash=5.3.9-r1 iw=6.17-r0 iproute2=7.0.0-r0 busybox=1.37.0-r31 tini=0.19.0-r3 wpa_supplicant=2.11-r4 hostapd=2.11-r4 dnsmasq=2.92_p2-r0 mosquitto=2.1.2-r1 nftables=1.1.6-r1
 COPY --from=build /opt/venv /opt/venv
@@ -34,14 +34,16 @@ COPY --from=build /cloudcutter/custom-firmware/OpenRTL8710B_UG_1.18.225.img /opt
 COPY --from=build /cloudcutter/src /opt/cloudcutter/src
 COPY --from=build /cloudcutter/device-profiles/schema /opt/cloudcutter/device-profiles/schema
 COPY --from=build /cloudcutter/LICENSE /opt/cloudcutter/LICENSE
+COPY lightleak/ /opt/lightleak/
 COPY app/ /opt/webapp/
+RUN python -c 'import sys; sys.path.insert(0,"/opt/webapp"); from lightleak_protocol import Assets; a=Assets(); assert len(a.variants)==13; [list(v.setup(a.binary(v,"proper"))) for v in a.variants.values()]'
 COPY integration/dhcp.sh /opt/webapp/dhcp.sh
 COPY run.sh /run.sh
 RUN chmod 755 /opt/webapp/dhcp.sh /run.sh
 ENV PATH=/opt/venv/bin:$PATH PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 UNTUYAOS3_SKIP_INSTALL=1
 WORKDIR /opt/webapp
-LABEL io.hass.name="Tuya Breaker" io.hass.description="Experimental UnTuyaOS3 and CloudCutter workspace" \
+LABEL io.hass.name="Tuya Breaker" io.hass.description="Experimental UnTuyaOS3, Lightleak and CloudCutter workspace" \
     io.hass.type="addon" io.hass.version="${BUILD_VERSION}" io.hass.arch="${BUILD_ARCH}" \
-    org.opencontainers.image.source="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App"
+    org.opencontainers.image.source="https://github.com/seb5594/Home-Assistant-Anti-Tuya-Apps"
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["/run.sh"]

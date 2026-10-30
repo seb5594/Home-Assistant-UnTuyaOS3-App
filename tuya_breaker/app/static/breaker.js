@@ -25,7 +25,7 @@ window.onSessionStatus = (state, data) => {
   const tool = data.tool || "untuyaos3";
   const busy = ["running", "assigning", "cleaning", "releasing", "offline"].includes(state)
     || Boolean(data.adapter_busy || data.selection_locked || breakerPending || startPending);
-  for (const name of ["untuyaos3", "cloudcutter"]) {
+  for (const name of ["untuyaos3", "lightleak", "cloudcutter"]) {
     const button = $("tool-" + name);
     button.disabled = busy;
     button.setAttribute("aria-pressed", String(tool === name));
@@ -34,6 +34,7 @@ window.onSessionStatus = (state, data) => {
   $("cloudcutter-settings").hidden = tool !== "cloudcutter";
   $("tool-description").textContent = tool === "cloudcutter"
     ? "CloudCutter: select the exact original firmware profile, then flash or detach."
+    : tool === "lightleak" ? "Lightleak: review a generic chip variant, install its payload and download a private flash backup."
     : "UnTuyaOS3: use the established platform and firmware menus.";
   for (const id of ccFields) $(id).disabled = busy;
   if (tool === "cloudcutter" && (breakerDirty || breakerPending || !data.engine_ready)) {
@@ -54,7 +55,7 @@ async function breakerRequest(path, data = {}) {
   try { return await api(path, data); }
   finally { breakerPending = false; breakerControls(); }
 }
-for (const tool of ["untuyaos3", "cloudcutter"]) {
+for (const tool of ["untuyaos3", "lightleak", "cloudcutter"]) {
   $("tool-" + tool).onclick = async () => {
     if ($("tool-" + tool).disabled) return;
     $("risk-ack").checked = false;

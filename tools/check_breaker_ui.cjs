@@ -8,7 +8,7 @@ const template = fs.readFileSync(root + "/index.html", "utf8").replace(/__[A-Z_]
   const browser = await chromium.launch(process.env.PLAYWRIGHT_CHANNEL ? {channel: process.env.PLAYWRIGHT_CHANNEL} : {});
   try {
     for (const width of [360, 390, 1280]) {
-      let state = "ready", tool = "untuyaos3", configured = false;
+      let state = "ready", tool = "untuyaos3", configured = false, lightleakConfigured = false;
       const errors = [];
       const hardware = Array.from({length:7},(_,i)=>({id:String(i+1).padStart(20,"0"),
         name:i===0 ? 'Test table lamp' : i===5 ? 'Test lamp <img src=x onerror="alert(1)">' : 'Test device '+(i+1),
@@ -17,10 +17,11 @@ const template = fs.readFileSync(root + "/index.html", "utf8").replace(/__[A-Z_]
       const hardwareData={devices:hardware,updated_at:"2026-10-28T00:00:00+00:00",version:"0.1"};
       const page = await browser.newPage({viewport: {width, height: 844}});
       page.on("pageerror", (error) => errors.push(String(error)));
-      const status = () => ({state, tool, engine_ready: tool === "untuyaos3" || configured,
+      const status = () => ({state, tool, engine_ready: tool === "untuyaos3" || (tool === "lightleak" ? lightleakConfigured : configured),
+        lightleak_review: lightleakConfigured ? {variant:"Lightleak - BK7231T",chip:"BK7231T",ap_mode:"linux",operation:"2 MiB post-exploit backup"} : null,
         cloudcutter_review: configured ? {device: "Test lamp", profile: "1.0.0 - BK7231N", chip: "BK7231N", method: "flash", firmware: "sample-bk7231n.ug.bin"} : null,
         selected_adapter: "wlan1", selection_locked: ["running", "releasing"].includes(state), adapter_busy: false,
-        recovery_pending: "", helper: {state: "ready", version: "1.1.0-beta.1", message: "Connected."},
+        recovery_pending: "", helper: {state: "ready", version: "1.2.0-beta.1", message: "Connected."},
         adapters: [{name: "wlan1", phy: "phy1", driver: "ath9k_htc", bus: "USB", eligible: true}],
         usb_devices: [], host: {}, events: [], cursor: 0, generation: "demo"});
       await page.route("http://breaker.invalid/**", async (route) => {
@@ -33,6 +34,8 @@ const template = fs.readFileSync(root + "/index.html", "utf8").replace(/__[A-Z_]
         if (url.pathname === "/api/cloudcutter/device") response = {profiles: [{slug: "test-profile", name: "1.0.0 - BK7231N", firmware: {chip: "BK7231N", name: "Test", sdk: "test"}}]};
         if (url.pathname === "/api/cloudcutter/hardware" || url.pathname === "/api/cloudcutter/hardware/refresh") response=hardwareData;
         if (/^\/api\/cloudcutter\/hardware\/[0-9]{20}$/.test(url.pathname)) response={...hardware[0],template:{name:hardware[0].name,pins:{6:"Rel;1"}}};
+        if (url.pathname === "/api/lightleak") response = {variants:[{slug:"lightleak-bk7231t",name:"Lightleak - BK7231T",chip:"BK7231T"}],backups:[]};
+        if (url.pathname === "/api/lightleak/configure") {lightleakConfigured = true; response = {ok:true};}
         if (url.pathname === "/api/cloudcutter/configure") {configured = true; response = {ok: true};}
         if (url.pathname === "/api/tool") {tool = route.request().postDataJSON().tool; response = {ok: true};}
         if (url.pathname === "/api/start") {state = "running"; response = {ok: true};}
@@ -43,6 +46,33 @@ const template = fs.readFileSync(root + "/index.html", "utf8").replace(/__[A-Z_]
       await page.waitForFunction(() => document.getElementById("state").textContent === "ready");
       assert.equal(await page.locator("#start").isDisabled(), true);
       if (width === 390) fs.writeFileSync("docs/images/breaker-mobile-untuyaos3.png", await page.screenshot({fullPage: true}));
+      assert.deepEqual(await page.locator(".tool-tabs button").allTextContents(), ["UnTuyaOS3","Lightleak","Tuya-Cloudcutter"]);
+      await page.locator("#tool-lightleak").click();
+      await page.locator("#lightleak-settings").waitFor({state:"visible"});
+      assert.equal(await page.locator("#start").isDisabled(),true);
+      assert.equal(await page.locator("#firmware-library").isVisible(),false);
+      await page.locator("#ll-chip").selectOption("BK7231T");
+      await page.locator("#ll-variant").selectOption("lightleak-bk7231t");
+      await page.locator("#ll-ap-mode").selectOption("linux");
+      await page.locator("#ll-save").click();
+      assert.equal(lightleakConfigured,false,"No configuration without write-risk consent");
+      await page.locator("#ll-writes").check();
+      await page.locator("#ll-save").click();
+      await page.waitForFunction(()=>document.getElementById("ll-review").textContent.startsWith("Reviewed:"));
+      assert.equal(await page.locator("#risk-ack").isChecked(),false);
+      assert.equal(await page.locator("#start").isDisabled(),true);
+      await page.locator("#risk-ack").check();
+      await page.waitForFunction(()=>!document.getElementById("start").disabled);
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+      if(width===390) fs.writeFileSync("docs/images/breaker-mobile-lightleak.png",await page.screenshot({fullPage:true}));
+      state="running";
+      await page.waitForFunction(()=>document.getElementById("state").textContent==="running");
+      assert.equal(await page.locator("#ll-save").isDisabled(),true);
+      assert.equal(await page.locator("#tool-cloudcutter").isDisabled(),true);
+      state="cancelled";lightleakConfigured=false;
+      await page.waitForFunction(()=>document.getElementById("state").textContent==="cancelled");
+      assert.equal(await page.locator("#start").isDisabled(),true);
+      assert.equal(await page.locator("#adapter-select").isDisabled(),false);
       await page.locator("#tool-cloudcutter").click();
       await page.locator("#cloudcutter-settings").waitFor({state: "visible"});
       await page.locator("#hardware-explorer summary").first().click();
@@ -97,7 +127,7 @@ const template = fs.readFileSync(root + "/index.html", "utf8").replace(/__[A-Z_]
       assert.equal(await page.locator("#adapter-select").isDisabled(), false);
       assert.equal(await page.locator("#start").isDisabled(), true);
       assert.deepEqual(errors, []);
-      console.log("PASS: " + width + "px — tool/profile review, consent, session/cleanup locks, no overflow or JS errors");
+      console.log("PASS: " + width + "px — three tools, Lightleak write consent, profile review, session/cleanup locks, no overflow or JS errors");
       await page.close();
     }
   } finally { await browser.close(); }

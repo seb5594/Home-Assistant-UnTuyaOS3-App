@@ -1,0 +1,17 @@
+{
+  "repository": "seb5594/lightleak",
+  "revision": "9163a1219d8ae651c16d52159c7ad2f003531b8e",
+  "workflow_run": 40438135099,
+  "artifact_id": 12704808569,
+  "artifact_sha256": "c77f54b933f38fd07df37ba941f1bedfd07704c6884bb569216fd4b0e0a3ab79",
+  "profiles_source": "https://tuya-cloudcutter.github.io/api/profiles.json",
+  "files": {
+    "bk7231n-proper-v1.bin": "73c663b537dcffdd17b58ed9c99d553607c3b930170a721abb1f3836309b3aec",
+    "bk7231n-stager-v1-ip.bin": "0c27ebfd76c0263c51c7d9e7d8de7e22c00921f2fbc5030ed88f7708934d967d",
+    "bk7231n-stager-v1-standard.bin": "0752e6735f6d6fe8aba1b56e9cce0d9ddfa4949e031270ca0c271137fe80ce4c",
+    "bk7231n-stager-v1-xor.bin": "cb1115facfd0439d1961bf186c074e671b0106cd0d1eaa72868e62a5a9a6b72b",
+    "bk7231t-proper-v1.bin": "e4207145170b6ddfc18c6ed828d533720c24bc9aecb397899239288aeb74af0d",
+    "bk7231t-stager-v1-standard.bin": "ca928c23bec8cf6d8d757de4adc174e77d76e32dae43a285eb76e86e5a86839c",
+    "profiles.json": "aad75256972f28fce9d110d93e686d641bbf318c8076b54f1117d54b6ad9fdde"
+  }
+}

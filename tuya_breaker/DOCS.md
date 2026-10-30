@@ -2,7 +2,7 @@
 
 **Flashing or changing a device's cloud configuration can permanently brick it or make the stock app unusable. Use this tool at your own risk. A successful exploit, a transfer and a working device are different results. The new CloudCutter integration has software/container coverage, but has not yet been tested on a physical device.**
 
-Tuya Breaker brings UnTuyaOS3 and classic Tuya CloudCutter into one Home Assistant Ingress UI. The original UnTuyaOS3 app remains available separately. Use only one of these main apps at a time. The same **Anti Tuya WiFi Helper** serves either app; it owns one radio lease at a time.
+Tuya Breaker brings UnTuyaOS3, Lightleak and classic Tuya CloudCutter into one Home Assistant Ingress UI. The original UnTuyaOS3 app remains available separately. Use only one of these main apps at a time. The same **Anti Tuya WiFi Helper** serves either app; it owns one radio lease at a time.
 
 ## Install and prepare
 
@@ -62,3 +62,26 @@ Closing the page does not stop a run. **Stop session** can interrupt a write and
 Both tools use the official Home Assistant Python 3.13 base. Separate virtual environments retain UnTuyaOS3's `sslpsk3` 2.x and CloudCutter's byte-preserving 1.1.1 callbacks. Both projects retain their original licenses. Source commits, base image and package pins are central in `project.json`; Dockerfiles, configurations and shared copies are generated.
 
 The new icon and logo keep the UnTuyaOS3 colour family with a separate lightning mark. The logo subtitle reads **Powered by tuya-cloudcutter + seb5594**; editable SVG sources live in `assets/branding/`.
+
+## Lightleak: generic variants and private flash dumps
+
+The tool selector is ordered **UnTuyaOS3 → Lightleak → Tuya-Cloudcutter**. Lightleak uses generic BK7231T/BK7231N variants rather than model-specific firmware profiles. This does not make every firmware exploitable. The native controller is experimental and has **no physical-device validation yet**.
+
+> **Lightleak is not a read-only backup operation. It writes a Wi-Fi stager, erases sector `0x132000`, and installs the dump payload there. It can permanently brick the target. Use it at your own risk and accept responsibility for your device. A complete dump is a post-exploit snapshot containing these changes and private keys.**
+
+1. Select **Lightleak**, confirm the actual target chip and explicitly choose a generic variant. The app never cycles through variants automatically.
+2. Choose the temporary AP method:
+   - **ESP CustomAP companion:** use the [CustomAP release image from seb5594/lightleak](https://github.com/seb5594/lightleak/releases) on a spare ESP32-C3/ESP32/ESP8266 or another supported board. Use a graphical flasher, power it on and check for `LightleakIdle`. Reset the companion before each attempt. Tuya Breaker joins it through the isolated adapter and configures its upstream TCP protocol. The Android app is not required by this native controller.
+   - **Linux AP (experimental):** the selected isolated adapter also serves the temporary `LightleakCustom` AP. No ESP, KVM or additional container is needed. The app verifies actual hostapd startup before sending the stager. Binary WPA passwords use a derived PSK. The AP uses the upstream `10.0.0.0/24` network because the BK7231N IP stager depends on that address prefix; an overlapping app route is rejected before target writes. Real target association and timing remain unvalidated; AP support alone does not prove this mode works with your device/driver.
+3. Remove a previously paired device in SmartLife with **Disconnect and wipe data**, then put it into AP pairing mode. Confirm the flash-write warning and review the configuration.
+4. Select an unused adapter, acknowledge the general device risk and start. Follow the numbered console prompts: select the target AP, accept stager installation, power-cycle and return the same target to AP pairing mode, then separately accept payload-sector writes. A ping alone does not establish exploit compatibility.
+5. Only a payload response from the DHCP-validated endpoint, with the correct request ID and CRC, unlocks flash readout. The readout has a five-minute deadline and bounded retries for missing blocks. Wrong-source, stale, corrupt, duplicate or out-of-range packets never advance coverage. Before publishing a completed dump, the readback of the payload sector must match the bundled binary. Incomplete dumps are discarded.
+6. Open **Private flash backups** in the Lightleak tab. Download the complete 2 MiB file and keep it private. Each entry includes a SHA-256 checksum. At most 16 backups are retained; download and explicitly delete old entries to free space. Startup discards partial files, never reuses an incomplete dump, and starts with fresh logs.
+
+No replacement firmware is installed by the Lightleak mode. A valid dump can help build a conventional CloudCutter profile; this integration does not automatically generate a profile, approve compatibility or restore a full raw dump. Return to Tuya-Cloudcutter only after obtaining a reviewed, matching profile. The OpenBeken hardware database supplies hardware references, not exploit approval.
+
+Cancel and every outcome use the same process-group termination, scoped-service shutdown, address/route cleanup and authenticated radio return as the other tools. All network traffic remains in the selected radio's isolated namespace. No host network, USB-wide access, host D-Bus, Docker socket or extra capabilities are added to Tuya Breaker.
+
+### Sources and reproducibility
+
+Thanks to **Kuba Szczodrzyński / tuya-cloudcutter** for [Lightleak](https://github.com/tuya-cloudcutter/lightleak), the payloads and [Cloudcutter Android's protocol reference](https://github.com/tuya-cloudcutter/cloudcutter-android). Payloads come from [the verified build of seb5594's fork](https://github.com/seb5594/lightleak/actions/runs/40438135099), revision `9163a1219d8ae651c16d52159c7ad2f003531b8e`. The six binaries and a snapshot of the 13 official generic variants are bundled for offline use. The build verifies their checked-in SHA-256 manifest; no expiring GitHub artifact or access token is needed at runtime. See `lightleak/manifest.json` and `lightleak/README.md` in the source tree.

@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0-beta.2",
+  "version": "1.2.0-beta.1",
   "protocol": 3,
   "base_image": "ghcr.io/home-assistant/base-python:3.13-alpine3.24@sha256:c7d34ae22a87275d46deb65bcb0511b389d7bc6eb8dccb28d44dd7cb8616e603",
   "upstream_repository": "tuya-cloudcutter/UnTuyaOS3",
@@ -110,7 +110,7 @@
     "tuya_breaker": {
       "config": {
         "name": "Tuya Breaker (Experimental)",
-        "description": "One Ingress workspace for UnTuyaOS3 and Tuya CloudCutter, with a shared isolated Wi-Fi lease",
+        "description": "One experimental Ingress workspace for UnTuyaOS3, Lightleak flash backups and Tuya-Cloudcutter, with an isolated Wi-Fi lease",
         "timeout": 30,
         "ingress": true,
         "ingress_port": 8099,
@@ -167,5 +167,7 @@
     }
   },
   "cloudcutter_repository": "seb5594/tuya-cloudcutter",
-  "cloudcutter_revision": "e8508b6bae09c00c67b5a5336b56d52153e40d25"
+  "cloudcutter_revision": "e8508b6bae09c00c67b5a5336b56d52153e40d25",
+  "lightleak_repository": "seb5594/lightleak",
+  "lightleak_revision": "9163a1219d8ae651c16d52159c7ad2f003531b8e"
 }

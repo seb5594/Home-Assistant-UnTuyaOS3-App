@@ -8,6 +8,7 @@ subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v
 subprocess.run(["node", "--check", "untuyaos3/app/static/app.js"], check=True)
 subprocess.run(["node", "--check", "tuya_breaker/app/static/breaker.js"], check=True)
 subprocess.run(["node", "--check", "tuya_breaker/app/static/hardware.js"], check=True)
+subprocess.run(["node", "--check", "tuya_breaker/app/static/lightleak.js"], check=True)
 subprocess.run(["node", "tests/test_webui.cjs"], check=True)
 if not shutil.which("apparmor_parser"):
     subprocess.run(["sudo", "apt-get", "update", "-qq"], check=True)

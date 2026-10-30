@@ -45,13 +45,13 @@ This repository is now **Home Assistant Anti Tuya Apps**. The [main app catalog]
 
 | App | Purpose | Setup |
 | --- | --- | --- |
-| Tuya Breaker (Experimental) | Combined tool workspace, hardware explorer and firmware library | [README](tuya_breaker/README.md) · [Guide](tuya_breaker/DOCS.md) |
+| Tuya Breaker (Experimental) | UnTuyaOS3, Lightleak and CloudCutter workspace, hardware explorer and firmware library | [README](tuya_breaker/README.md) · [Guide](tuya_breaker/DOCS.md) |
 | UnTuyaOS3 | Original interactive UnTuyaOS3 workflow | [README](untuyaos3/README.md) · [Guide](untuyaos3/DOCS.md) |
 | Anti Tuya WiFi Helper | Shared adapter isolation and restoration for either main app | [README](untuyaos3_wifi/README.md) · [Guide](untuyaos3_wifi/DOCS.md) |
 
 Install the helper once and choose either main app; use only one main app at a time. The helper keeps its existing installed identifier, pairing configuration and recovery data after the display-name change.
 
-**New on `dev`: [Tuya Breaker](tuya_breaker/DOCS.md), an experimental combined app with UnTuyaOS3 and classic Tuya CloudCutter in one Ingress workspace.** It lives in `tuya_breaker/` and shares the existing Wi-Fi Helper. The original UnTuyaOS3 app remains available. This integration has software/container tests but no physical-device CloudCutter validation yet. Lightleak is out of scope for now.
+**New on `dev`: [Tuya Breaker](tuya_breaker/DOCS.md), an experimental combined app with UnTuyaOS3, Lightleak and classic Tuya CloudCutter in one Ingress workspace.** It lives in `tuya_breaker/` and shares the existing Wi-Fi Helper. The original UnTuyaOS3 app remains available. This integration has software/container tests but no physical-device CloudCutter validation yet. The Lightleak controller is experimental: it writes a stager and payload sector before creating a private 2 MiB dump. Both its ESP CustomAP path and its Linux AP alternative still need physical-device validation. [Read the Lightleak guide](tuya_breaker/DOCS.md#lightleak-generic-variants-and-private-flash-dumps) before starting.
 
 [![Tuya Breaker — Powered by tuya-cloudcutter + seb5594](tuya_breaker/logo.png)](tuya_breaker/DOCS.md)
 

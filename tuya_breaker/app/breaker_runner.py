@@ -1,9 +1,12 @@
-"""Two fixed engines using the same guarded runner and radio lease."""
+"""Three fixed engines using the same guarded runner and radio lease."""
 import json
 from pathlib import Path
 import re
 import shutil
+import secrets
 import subprocess
+
+from lightleak_protocol import Assets
 
 from runner import Runner
 from wifi import command, same_device
@@ -22,6 +25,14 @@ class BreakerRunner(Runner):
         self.hardware = HardwareCatalogue(self.data / 'openbeken')
         self.credentials = self.data / 'cloudcutter/credentials'
         self.credentials.mkdir(parents=True, exist_ok=True, mode=0o700)
+        self.lightleak = Assets()
+        self.lightleak_settings = self.lightleak_review = None
+        self.backups = self.data / 'lightleak/backups'
+        self.backups.mkdir(parents=True, exist_ok=True, mode=0o700)
+        # No partial dump is advertised or resumed after a process/container restart.
+        for partial in self.backups.glob('*.partial'):
+            if partial.is_file() and not partial.is_symlink():
+                partial.unlink()
 
     def idle(self):
         if self.state in BUSY or (self.thread and self.thread.is_alive()):
@@ -30,10 +41,10 @@ class BreakerRunner(Runner):
     def choose_tool(self, tool):
         with self.lock:
             self.idle()
-            if tool not in ('untuyaos3', 'cloudcutter'):
+            if tool not in ('untuyaos3', 'lightleak', 'cloudcutter'):
                 raise ValueError('Unknown tool')
             self.tool = tool
-            self.engine_name = 'CloudCutter' if tool == 'cloudcutter' else 'UnTuyaOS3'
+            self.engine_name = {'untuyaos3':'UnTuyaOS3','lightleak':'Lightleak','cloudcutter':'CloudCutter'}[tool]
             self.journal.emit('info', f'Selected tool: {tool}')
 
     def configure(self, request, firmware):
@@ -67,12 +78,64 @@ class BreakerRunner(Runner):
                        'chip': chip, 'method': method, 'firmware': Path(settings['firmware']).name if method == 'flash' else None}
         self.journal.emit('info', 'CloudCutter configuration reviewed: ' + json.dumps(self.review))
 
+    def configure_lightleak(self, request):
+        with self.lock:
+            self.idle()
+            self.lightleak_settings = self.lightleak_review = None
+            variant = self.lightleak.variant(request.get('variant'))
+            mode = request.get('ap_mode')
+            if mode not in ('companion', 'linux'):
+                raise ValueError('Choose ESP CustomAP or experimental Linux AP')
+            if request.get('understand_writes') is not True:
+                raise ValueError('Acknowledge that Lightleak setup writes target flash')
+            self.lightleak_settings = {'variant':variant.slug,'ap_mode':mode}
+            self.lightleak_review = {'variant':variant.name,'chip':variant.chip,'ap_mode':mode,
+                                    'operation':'2 MiB post-exploit backup; setup writes device flash'}
+            self.journal.emit('info','Lightleak configuration reviewed: '+json.dumps(self.lightleak_review))
+
+    def backup_files(self):
+        result = []
+        for file in sorted(self.backups.glob('*.json')):
+            if file.is_symlink() or not re.fullmatch(r'[0-9a-f]{32}',file.stem):
+                continue
+            binary = file.with_suffix('.bin')
+            if not binary.is_file() or binary.is_symlink() or binary.stat().st_size != 0x200000:
+                continue
+            try:
+                info = json.loads(file.read_text())
+                if info.get('id')==file.stem and info.get('size')==0x200000:
+                    result.append(info)
+            except (ValueError, OSError):
+                continue
+        return result
+
+    def backup_file(self, identifier):
+        if not isinstance(identifier,str) or not re.fullmatch(r'[0-9a-f]{32}',identifier):
+            raise ValueError('Invalid backup identifier')
+        if not any(info['id']==identifier for info in self.backup_files()):
+            raise ValueError('Complete backup unavailable')
+        return self.backups/(identifier+'.bin')
+
+    def delete_backup(self, identifier):
+        with self.lock:
+            self.idle()
+            path=self.backup_file(identifier)
+            path.unlink()
+            path.with_suffix('.json').unlink(missing_ok=True)
+
     def status(self):
         return {**super().status(), 'tool': self.tool,
-                'engine_ready': self.tool == 'untuyaos3' or self.settings is not None,
-                'cloudcutter_review': self.review}
+                'engine_ready': self.tool == 'untuyaos3' or (self.settings is not None if self.tool=='cloudcutter' else self.lightleak_settings is not None),
+                'cloudcutter_review': self.review, 'lightleak_review': self.lightleak_review}
 
     def ensure_ready(self):
+        if self.tool == 'lightleak':
+            if not self.lightleak_settings:
+                raise ValueError('Review the Lightleak variant, AP mode and flash-write risk first')
+            if len(list(self.backups.glob('*.bin')))>=16:
+                raise ValueError('Private backup limit reached (16); download and delete an old backup first')
+            if shutil.disk_usage(self.backups).free < 18*1024*1024:
+                raise ValueError('Insufficient free space for a complete Lightleak backup')
         if self.tool == 'cloudcutter' and not self.settings:
             raise ValueError('Review the exact CloudCutter profile and operation first')
         if self.tool == 'cloudcutter' and len(list(self.credentials.glob('*.json'))) >= 100:
@@ -86,6 +149,13 @@ class BreakerRunner(Runner):
         if self.tool == 'untuyaos3':
             return super().session_command(session_dir)
         root = Path(session_dir)
+        if self.tool == 'lightleak':
+            settings = {**self.lightleak_settings, 'original_power_save':self.options.get('original_power_save'),
+                        'output':str(self.backups/(secrets.token_hex(16)+'.bin'))}
+            target=root/'lightleak.json'
+            target.write_text(json.dumps(settings),encoding='utf-8')
+            target.chmod(0o600)
+            return ['/opt/venv/bin/python','/opt/webapp/lightleak_session.py',str(target)]
         settings = dict(self.settings)
         shutil.copyfile(settings['profile'], root / 'profile.json')
         settings.update(profile=str(root/'profile.json'), credentials=str(self.credentials),
@@ -96,7 +166,7 @@ class BreakerRunner(Runner):
         return ['/opt/cloudcutter-venv/bin/python', '/opt/webapp/cloudcutter_session.py', str(target)]
 
     def before_cleanup(self, present=True):
-        if self.tool == 'cloudcutter':
+        if self.tool in ('cloudcutter','lightleak'):
             if self.process:
                 table = f'breaker_{int(self.process.pid)}'
                 exists = subprocess.run(['nft', 'list', 'table', 'inet', table], capture_output=True, timeout=8)
@@ -107,11 +177,12 @@ class BreakerRunner(Runner):
             same_device(self.adapter)
             command('ip', 'link', 'set', 'dev', self.adapter.name, 'down')
             command('iw', 'dev', self.adapter.name, 'set', 'type', 'managed')
-            self.journal.emit('info', 'CloudCutter services stopped; selected radio restored to managed mode')
+            self.journal.emit('info', f'{self.engine_name} services stopped; selected radio restored to managed mode')
 
     def _run(self):
         try:
             super()._run()
         finally:
+            self.lightleak_settings = None
             if self.tool == 'cloudcutter':
                 self.settings = None  # Especially the destination Wi-Fi password.
