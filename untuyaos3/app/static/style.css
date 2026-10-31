@@ -8,6 +8,13 @@ body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 system-ui,san
 .steps{color:var(--muted);font-size:13px;padding-left:20px}[hidden]{display:none!important}
 .report-card{margin-top:20px;padding:22px;display:flex;align-items:center;justify-content:space-between;gap:18px}.report-card p{font-size:13px;max-width:760px}
 .credit{font-size:13px}a{color:var(--cyan)}footer{line-height:1.8}
+footer{text-align:center}
+footer .developer-credit{display:block;margin-top:20px;color:inherit;text-decoration:none}
+footer .developer-credit:hover{text-decoration:underline}
+footer .credit-heart{color:#ff4d5e}
+footer .footer-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 12px;margin-top:8px}
+footer .support-link{display:inline-flex;align-items:center;justify-content:center;color:var(--cyan);text-decoration:none;border:1px solid var(--line);border-radius:7px;padding:6px 12px}
+footer .support-link:hover{border-color:var(--cyan)}
 @media(max-width:600px){.report-card{flex-direction:column;align-items:start}}
 
 .preparation-card{margin-bottom:18px}.preparation-body{padding:16px 22px}.preparation-body p{font-size:13px}

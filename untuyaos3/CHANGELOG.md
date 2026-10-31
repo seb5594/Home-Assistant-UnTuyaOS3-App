@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.2
+
+- Add a centered footer with the developer credit, project link, Home Assistant Apps catalog and PayPal support button.
+
 ## 1.0.1
 
 - Publish the standalone UnTuyaOS3 app as a new release without changing the historical 1.0.0 tag.
