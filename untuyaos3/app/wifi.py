@@ -1,4 +1,4 @@
-# Copy of shared/wifi.py, maintained by tools/sync_project.py. Edit the original.
+# Generated from the pinned WiFi Helper SDK; do not edit.
 """Wi-Fi inspection helpers shared by both apps.
 
 Discovery here only reads state (``iw``, ``ip``, sysfs, NetworkManager over busctl). The

@@ -35,7 +35,7 @@ The part I'm happiest with is probably the stuff around it that you only notice 
 
 **Credits:** all the clever work (exploit, protocol, scripts, firmware) belongs to the [tuya-cloudcutter](https://github.com/tuya-cloudcutter) community, and the original exploit comes from kuba2k2 and the [LibreTiny](https://github.com/libretiny-eu/libretiny) project. I only wrapped it for Home Assistant, so please give them a star. The app links to the original project in its web UI, and a workflow watches their repository for new releases.
 
-Repository, install steps and docs: https://github.com/seb5594/Home-Assistant-Anti-Tuya-Apps
+Repository, install steps and docs: https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App
 
 It is free and MIT licensed, built in my spare time. Questions, bug reports and "it bricked my X" stories are all welcome.
 
@@ -72,6 +72,6 @@ Am meisten freut mich vermutlich das Drumherum, das man erst merkt, wenn etwas s
 
 **Credits:** Die ganze clevere Arbeit (Exploit, Protokoll, Skripte, Firmware) gehört der [tuya-cloudcutter](https://github.com/tuya-cloudcutter)-Community, der ursprüngliche Exploit stammt von kuba2k2 und dem [LibreTiny](https://github.com/libretiny-eu/libretiny)-Projekt. Ich habe es nur für Home Assistant verpackt, gebt ihnen also gern einen Stern. Die App verlinkt das Originalprojekt in ihrer Oberfläche, und ein Workflow beobachtet deren Repository auf neue Releases.
 
-Repository, Installation und Doku: https://github.com/seb5594/Home-Assistant-Anti-Tuya-Apps
+Repository, Installation und Doku: https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App
 
 Kostenlos, MIT-Lizenz, in der Freizeit gebaut. Fragen, Fehlerberichte und „hat mir mein X gebrickt“-Geschichten sind alle willkommen.

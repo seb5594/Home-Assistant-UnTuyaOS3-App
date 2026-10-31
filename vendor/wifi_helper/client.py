@@ -1,7 +1,6 @@
-# Generated base module from untuyaos3/app; do not edit.
 """Request a radio from the Wi-Fi helper app without any access to the host network.
 
-The helper owns the host side of the handover (see untuyaos3_wifi/app/broker.py). This
+The helper owns the host side of the handover (see wifi_helper/app/broker.py). This
 module is the client: it lists adapters, asks for one radio to be moved into this app's
 network namespace and gives it back when the session is over.
 """
@@ -10,8 +9,8 @@ import socket
 import threading
 import subprocess
 import json
-from wifi import same_device, PreflightError, command
-from protocol import (INVENTORY, SOCKET, PairingFailed, ProtocolMismatch, SecretNotSet,
+from .wifi import same_device, PreflightError, command
+from .protocol import (INVENTORY, SOCKET, PairingFailed, ProtocolMismatch, SecretNotSet,
                       client_authenticate, receive, send, validate_interface, validate_options)
 
 
@@ -160,3 +159,77 @@ class Lease:
                 self.journal.emit("info", "Adapter returned and original host settings restored; selection unlocked")
         finally:
             self.close()
+
+
+class _Log:
+    def __init__(self, callback):
+        self.callback = callback or (lambda *_: None)
+
+    def emit(self, level, text, channel='helper'):
+        self.callback(level, text, channel)
+
+
+class RadioLease:
+    """SDK lease handle. Stop your radio services before calling release()."""
+    def __init__(self, lease, log):
+        self._lease, self._log = lease, log
+        self.interface, self.phy, self.mac = lease.interface, lease.phy, lease.mac
+        self.original_power_save = lease.power_save
+        from .wifi import Adapter
+        link = json.loads(command('ip', '-j', 'link', 'show', 'dev', self.interface))[0]
+        if link.get('address','').lower() != self.mac.lower():
+            raise RuntimeError('Leased radio identity changed during SDK initialization')
+        self.adapter = Adapter(self.interface, self.phy, link['ifindex'])
+        self._released = False
+
+    def release(self):
+        """Clean only this leased adapter, then return it and verify host restoration.
+
+        This does not know or stop your processes. The caller must stop hostapd,
+        supplicant, DHCP and other radio users first. On any error, exit the client
+        container so its network namespace can be destroyed and recovered.
+        """
+        if self._released:
+            return
+        from .wifi import cleanup
+        same_device(self.adapter)
+        link = json.loads(command('ip','-j','link','show','dev',self.interface))[0]
+        if link.get('address','').lower() != self.mac.lower():
+            raise RuntimeError('Leased radio MAC changed; cleanup refused')
+        if not cleanup(self.adapter, self._log.emit):
+            raise RuntimeError('Radio cleanup failed; stop the client app for helper recovery')
+        self._lease.release(self.adapter)
+        self._released = True
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.release()
+
+
+class Client:
+    """Small public SDK: inventory, one explicit radio lease and safe return.
+
+    Applications must watch `lost` and shut down their container if it is set.
+    Sharing the secret grants radio-control authority; give it only to trusted apps.
+    """
+    def __init__(self, secret, *, lost=None, log=None):
+        self.options = {'pairing_token': secret}
+        validate_options(self.options)
+        self.lost = lost if lost is not None else threading.Event()
+        self.log = _Log(log)
+
+    def inventory(self):
+        return inventory(self.options)
+
+    def acquire(self, interface):
+        active = Lease(self.options, self.log, self.lost, interface)
+        try:
+            return RadioLease(active, self.log)
+        except BaseException:
+            # A failed local initialization must never leave a running app with
+            # unknown radio ownership. The SDK signals its caller to terminate.
+            active.close()
+            self.lost.set()
+            raise

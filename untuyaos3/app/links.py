@@ -1,24 +1,18 @@
 """Links and project identity shown in the Web UI: upstream credit, issue reports, the helper app."""
 from html import escape
 import re
-import socket
 from urllib.parse import urlencode
 
 from protocol import APP_VERSION, BUILD_INFO
 
 MY_HOME_ASSISTANT = "https://my.home-assistant.io/redirect"
-HELPER_SLUG = "untuyaos3_wifi"
-# Home Assistant names the container "<repository hash>-<app slug>" with dashes. The same
-# hash prefixes the helper's slug, because both apps come from one repository.
-OWN_HOSTNAME = re.compile(r"(?P<repository>[0-9a-f]{8}|local)-(?:untuyaos3|tuya-breaker)")
-
-
 def helper_url(hostname=None):
-    """Deep link to the helper's page in Home Assistant, or to the app store if we cannot tell."""
-    match = OWN_HOSTNAME.fullmatch(hostname or socket.gethostname())
-    if not match:
-        return f"{MY_HOME_ASSISTANT}/supervisor_addons/"
-    return f"{MY_HOME_ASSISTANT}/supervisor_addon/?" + urlencode({"addon": f"{match['repository']}_{HELPER_SLUG}"})
+    """A client repository cannot infer the helper's repository hash.
+
+    Before authenticated discovery, open the app store. The helper supplies its
+    actual addon_slug afterwards; the Web UI validates it before constructing a link.
+    """
+    return f"{MY_HOME_ASSISTANT}/supervisor_addons/"
 
 
 def upstream_url():

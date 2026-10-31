@@ -101,6 +101,10 @@ const HELPER_STATES = {
   error: ["Helper problem", "error", "failed"]
 };
 function showHelper(helper = {}) {
+  const slug = typeof helper.addon_slug === "string" ? helper.addon_slug : "";
+  $("helper-open").href = /^(?:[0-9a-f]{8}|local)_wifi_helper$/.test(slug)
+    ? "https://my.home-assistant.io/redirect/supervisor_addon/?addon=" + encodeURIComponent(slug)
+    : "https://my.home-assistant.io/redirect/supervisor_addons/";
   const key = JSON.stringify(helper);
   if (key === helperView) return;
   helperView = key;

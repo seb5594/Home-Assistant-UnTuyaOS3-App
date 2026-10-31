@@ -10,11 +10,10 @@ from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "untuyaos3/app"))
-sys.path.insert(1, str(ROOT / "untuyaos3_wifi/app"))
 import devices
 import lease
 import links
-from protocol import APP_VERSION, BUILD_INFO, PairingFailed, ProtocolMismatch, SecretNotSet, validate_options
+from protocol import APP_VERSION, BUILD_INFO, PairingFailed, ProtocolMismatch, SecretNotSet, PROTOCOL_VERSION, validate_options
 
 
 class HelperStateTests(unittest.TestCase):
@@ -52,14 +51,14 @@ class DevicesHelperTests(unittest.TestCase):
         with self.inventory(helper={"version": APP_VERSION}):
             self.devices.refresh()
         helper = self.devices.status()["helper"]
-        self.assertEqual((helper["state"], helper["version"], helper["expected_version"]), ("ready", APP_VERSION, APP_VERSION))
+        self.assertEqual((helper["state"], helper["version"], helper["expected_protocol"]), ("ready", APP_VERSION, PROTOCOL_VERSION))
 
-    def test_different_helper_release_is_only_a_warning(self):
+    def test_different_helper_release_is_ready_with_compatible_protocol(self):
         with self.inventory(helper={"version": "0.0.1"}):
             self.devices.refresh()
         helper = self.devices.status()["helper"]
-        self.assertEqual(helper["state"], "outdated")
-        self.assertIn("0.0.1", helper["message"])
+        self.assertEqual(helper["state"], "ready")
+        self.assertEqual(helper["version"], "0.0.1")
 
     def test_old_helper_without_version_info_still_works(self):
         with self.inventory():
@@ -111,12 +110,16 @@ class DevicesHelperTests(unittest.TestCase):
             self.devices.poll_helper(self.socket_path)
             inventory.assert_not_called()
 
+    def test_reported_protocol_mismatch_is_not_a_release_version_warning(self):
+        with self.inventory(helper={'version':'1.0.0','protocol':999}):
+            self.devices.refresh()
+        self.assertEqual(self.devices.status()['helper']['state'],'protocol')
+
 
 class LinkTests(unittest.TestCase):
-    def test_helper_link_follows_the_repository_hash_of_the_running_app(self):
-        self.assertEqual(links.helper_url("a1b2c3d4-untuyaos3"),
-                         "https://my.home-assistant.io/redirect/supervisor_addon/?addon=a1b2c3d4_untuyaos3_wifi")
-        self.assertIn("addon=local_untuyaos3_wifi", links.helper_url("local-untuyaos3"))
+    def test_helper_link_never_guesses_a_repository_hash(self):
+        for hostname in ('a1b2c3d4-untuyaos3','local-untuyaos3'):
+            self.assertTrue(links.helper_url(hostname).endswith('/supervisor_addons/'))
 
     def test_unknown_hostname_falls_back_to_the_app_store(self):
         for hostname in ("a1b2c3d4-untuyaos3-wifi", "something", "A1B2C3D4-untuyaos3"):
@@ -129,7 +132,7 @@ class LinkTests(unittest.TestCase):
         self.assertIn("https://github.com/tuya-cloudcutter/UnTuyaOS3", page)
         self.assertIn(BUILD_INFO["upstream_revision"], page)
         self.assertIn("template=device-report.yml", page)
-        self.assertIn("abcdef01_untuyaos3_wifi", page)
+        self.assertIn("/supervisor_addons/", page)
         self.assertIn('content="csrf-token"', page)
 
     def test_report_form_exists_in_the_repository(self):

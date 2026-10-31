@@ -7,7 +7,7 @@
 
     follow_upstream.py apply --revision SHA --label LABEL [--reason TEXT] [--body-file FILE]
         Pin that revision in project.json, raise the app version by one patch, add a changelog
-        entry to both apps and regenerate the build contexts. Checks that the reviewed patches
+        entry to the app and regenerate the build contexts. Checks that the reviewed patches
         (untuyaos3/integration/patch_upstream.py) still apply to the new revision and writes a
         pull request description to FILE.
 
@@ -31,7 +31,7 @@ import urllib.request
 ROOT = Path(__file__).resolve().parents[1]
 API = "https://api.github.com"
 CODELOAD = "https://codeload.github.com"
-APPS = ("untuyaos3", "untuyaos3_wifi")
+APPS = ("untuyaos3",)
 RELEASE_TAG = re.compile(r"v?(\d+)\.(\d+)\.(\d+)")
 SHA = re.compile(r"[0-9a-f]{40}")
 

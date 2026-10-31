@@ -1,0 +1,14 @@
+{
+  "repository": "seb5594/Home-Assistant-WiFi-Helper-App",
+  "revision": "d1498a101c51ca8ac41b5fc3422585ed1fd9bebc",
+  "sdk_version": "1.0.0",
+  "protocol": 3,
+  "files": {
+    "build_info.json": "b6056d48ff61677e3461d4cf530a5ec31a7bafa135bc74ebbf04478f402f09a5",
+    "client.py": "398e975e63a43eb74159bf0bb73b782a25b0b6b5ace9ea0b6323fff35e3605d4",
+    "LICENSE": "35a28df3272b0d5b6ddd12ac23f47d6bbbebce30c6668a13c3af117e4fc685e3",
+    "protocol.py": "eb651492e49566b23336b26a128e365e79be30bbc715dfc9fbd2e55e636a1f9d",
+    "wifi.py": "11a91c8ef353ed61ca08e3acccb0c5380d83d7e61f1fbceb6dd5197e94fb9ddd",
+    "__init__.py": "aadb8d6617bac7ea8ae24b4c7d75f5b14ca81774024ba2a3889e91795c501249"
+  }
+}

@@ -4,5 +4,5 @@ contact_links:
     url: https://github.com/tuya-cloudcutter/UnTuyaOS3/wiki/FAQ
     about: The FAQ and device compatibility wiki of the upstream project usually have the answer.
   - name: Compatibility list
-    url: https://github.com/seb5594/Home-Assistant-Anti-Tuya-Apps/blob/main/docs/compatibility.md
+    url: https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/blob/main/docs/compatibility.md
     about: See which devices and Wi-Fi adapters others have already tried.

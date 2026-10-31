@@ -2,4 +2,3 @@
 *.bin -text
 
 # Lightleak stagers intentionally contain no NUL bytes; never normalize their line endings.
-*.bin -text

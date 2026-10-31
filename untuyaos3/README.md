@@ -1,6 +1,6 @@
 # UnTuyaOS3
 
-UnTuyaOS3 provides the original interactive UnTuyaOS3 firmware menus in Home Assistant Ingress, with a live terminal and continuously visible diagnostics. It requires the Anti Tuya WiFi Helper and an unused, AP-capable Wi-Fi adapter.
+UnTuyaOS3 provides the original interactive UnTuyaOS3 firmware menus in Home Assistant Ingress, with a live terminal and continuously visible diagnostics. It requires the WiFi Namespace Helper and an unused, AP-capable Wi-Fi adapter.
 
 > **Experimental firmware tooling can permanently brick a device. Use at your own risk. No successful transfer guarantees that the device will boot.**
 

@@ -1,5 +1,5 @@
 {
-  "version": "1.2.0-beta.1",
+  "version": "1.0.0",
   "protocol": 3,
   "base_image": "ghcr.io/home-assistant/base-python:3.13-alpine3.24@sha256:c7d34ae22a87275d46deb65bcb0511b389d7bc6eb8dccb28d44dd7cb8616e603",
   "upstream_repository": "tuya-cloudcutter/UnTuyaOS3",
@@ -33,7 +33,7 @@
     "ca-certificates"
   ],
   "common_config": {
-    "url": "https://github.com/seb5594/Home-Assistant-Anti-Tuya-Apps",
+    "url": "https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App",
     "arch": [
       "amd64",
       "aarch64"
@@ -86,62 +86,6 @@
         "tini",
         "wpa_supplicant"
       ]
-    },
-    "untuyaos3_wifi": {
-      "config": {
-        "name": "Anti Tuya WiFi Helper",
-        "description": "Shared companion for UnTuyaOS3 and Tuya Breaker: isolates one idle Wi-Fi radio and restores its host settings after each session",
-        "timeout": 60,
-        "host_network": true,
-        "host_dbus": true,
-        "privileged": [
-          "NET_ADMIN"
-        ]
-      },
-      "options": {},
-      "schema": {},
-      "packages": [
-        "iw",
-        "iproute2",
-        "busctl",
-        "tini"
-      ]
-    },
-    "tuya_breaker": {
-      "config": {
-        "name": "Tuya Breaker (Experimental)",
-        "description": "One experimental Ingress workspace for UnTuyaOS3, Lightleak flash backups and Tuya-Cloudcutter, with an isolated Wi-Fi lease",
-        "timeout": 30,
-        "ingress": true,
-        "ingress_port": 8099,
-        "ingress_stream": true,
-        "panel_title": "Tuya Breaker",
-        "panel_icon": "mdi:anvil",
-        "panel_admin": true,
-        "privileged": [
-          "NET_ADMIN",
-          "NET_RAW"
-        ],
-        "stage": "experimental"
-      },
-      "options": {
-        "run_timeout": 1800
-      },
-      "schema": {
-        "run_timeout": "int(60,7200)"
-      },
-      "packages": [
-        "bash",
-        "iw",
-        "iproute2",
-        "busybox",
-        "tini",
-        "wpa_supplicant",
-        "hostapd",
-        "dnsmasq",
-        "mosquitto",
-        "nftables"
-      ]
     }
   },
   "translations": {
@@ -166,8 +110,5 @@
       }
     }
   },
-  "cloudcutter_repository": "seb5594/tuya-cloudcutter",
-  "cloudcutter_revision": "e8508b6bae09c00c67b5a5336b56d52153e40d25",
-  "lightleak_repository": "seb5594/lightleak",
-  "lightleak_revision": "9163a1219d8ae651c16d52159c7ad2f003531b8e"
+  "helper_socket": "/share/wifi-helper-private/wifi.sock"
 }

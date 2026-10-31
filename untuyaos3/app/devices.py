@@ -5,7 +5,7 @@ from pathlib import Path
 import threading
 
 from lease import Lease, helper_state, inventory
-from protocol import APP_VERSION, SOCKET, validate_interface
+from protocol import PROTOCOL_VERSION, SOCKET, validate_interface
 
 # Text for the Web UI's helper card, keyed by helper state.
 HELPER_MESSAGES = {
@@ -16,7 +16,7 @@ HELPER_MESSAGES = {
                       "tab of both apps and restart both.",
     "pairing": "The helper rejected the pairing secret. Both apps need exactly the same value in their Configuration "
                "tab. Restart both after changing it.",
-    "protocol": "The helper speaks a different protocol version. Update both apps to the same release and restart them.",
+    "protocol": "The helper speaks a different protocol version. Use a compatible API protocol and restart the helper and client.",
 }
 # Runner states in which no session is using (or about to use) the radio.
 IDLE_STATES = ("starting", "select_adapter", "ready", "finished", "unconfirmed", "cancelled", "failed")
@@ -49,7 +49,7 @@ class Devices:
         return {"selected_adapter": self.selected, "adapters": self.adapters, "usb_devices": self.usb_devices,
                 "adapter_error": self.error, "recovery_pending": self.recovery_pending, "host": self.host,
                 "selection_locked": self.lease is not None, "adapter_busy": self.operation.locked(),
-                "helper": {**self.helper, "expected_version": APP_VERSION}}
+                "helper": {**self.helper, "expected_protocol": PROTOCOL_VERSION}}
 
     def refresh(self):
         """Ask the helper for adapters and USB devices; auto-select the only eligible one."""
@@ -84,13 +84,12 @@ class Devices:
 
     @staticmethod
     def _connected_helper(info):
-        """Helper card data after a successful inventory; a different release is only a soft warning."""
-        version = info.get("version") if isinstance(info, dict) else None
-        if version and version != APP_VERSION:
-            return {"state": "outdated", "version": version,
-                    "message": f"Helper {version} and this app {APP_VERSION} differ. "
-                               "Update both apps to the same release."}
-        return {"state": "ready", "version": version, "message": HELPER_MESSAGES["ready"]}
+        """App versions are independent; successful mutual authentication already checked protocol 3."""
+        info = info if isinstance(info,dict) else {}
+        if info.get('protocol',PROTOCOL_VERSION) != PROTOCOL_VERSION:
+            return {'state':'protocol','version':info.get('version'),'message':HELPER_MESSAGES['protocol']}
+        return {'state':'ready','version':info.get('version'),'protocol':PROTOCOL_VERSION,
+                'addon_slug':info.get('addon_slug'),'message':HELPER_MESSAGES['ready']}
 
     @staticmethod
     def _failed_helper(error):

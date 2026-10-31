@@ -1,4 +1,4 @@
-# Copy of shared/protocol.py, maintained by tools/sync_project.py. Edit the original.
+# Generated from the pinned WiFi Helper SDK; do not edit.
 """Authenticated local IPC between the main app and the Wi-Fi helper.
 
 The two apps talk over a Unix socket in the shared ``/share`` mount. A radio is handed
@@ -18,10 +18,10 @@ import re
 import socket
 import stat
 
-SOCKET = "/share/untuyaos3-private/wifi.sock"
+SOCKET = "/share/wifi-helper-private/wifi.sock"
 MAX_PACKET = 65536
 MIN_SECRET_LENGTH = 32
-# Written by tools/sync_project.py from project.json, so both apps always agree on it.
+# Protocol compatibility is independent of app release versions. The SDK ships its own build_info.json.
 BUILD_INFO = json.loads(Path(__file__).with_name("build_info.json").read_text())
 PROTOCOL_VERSION = BUILD_INFO["protocol"]
 APP_VERSION = BUILD_INFO["version"]

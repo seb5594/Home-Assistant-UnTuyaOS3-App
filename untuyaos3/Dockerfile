@@ -13,7 +13,7 @@ COPY integration/patch_upstream.py /tmp/patch_upstream.py
 RUN python /tmp/patch_upstream.py /upstream
 
 FROM ${BUILD_FROM}
-ARG BUILD_VERSION=1.2.0-beta.1
+ARG BUILD_VERSION=1.0.0
 ARG BUILD_ARCH=amd64
 RUN apk add --no-cache bash=5.3.9-r1 iw=6.17-r0 iproute2=7.0.0-r0 busybox=1.37.0-r31 tini=0.19.0-r3 wpa_supplicant=2.11-r4
 COPY --from=build /opt/venv /opt/venv
@@ -26,6 +26,6 @@ ENV PATH=/opt/venv/bin:$PATH PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 UNTUYA
 WORKDIR /opt/webapp
 LABEL io.hass.name="UnTuyaOS3" io.hass.description="Interactive UnTuyaOS3 with Ingress and live logs" \
     io.hass.type="addon" io.hass.version="${BUILD_VERSION}" io.hass.arch="${BUILD_ARCH}" \
-    org.opencontainers.image.source="https://github.com/seb5594/Home-Assistant-Anti-Tuya-Apps"
+    org.opencontainers.image.source="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App"
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["/run.sh"]

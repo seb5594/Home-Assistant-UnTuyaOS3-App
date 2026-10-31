@@ -5,35 +5,28 @@ import io
 import json
 import os
 from pathlib import Path
+import re
 import socket
 import sys
 import tempfile
 import threading
 import time
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
-
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "untuyaos3/app"))
-sys.path.insert(1, str(ROOT / "untuyaos3_wifi/app"))
-import wifi
-import protocol
-import dhcp
-import server
+sys.path.insert(0,str(ROOT/'untuyaos3/app'))
+import wifi,protocol,dhcp,server,devices,lease,supplicant
+from wifi import Adapter,radio_unblocked,PreflightError
 from journal import Journal
 from runner import Runner
-
-spec = importlib.util.spec_from_file_location("broker", ROOT / "untuyaos3_wifi/app/broker.py")
-broker = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(broker)
-
 IW = "phy#0\n\tInterface wlan1\n\t\tifindex 4\n\t\ttype managed\n"
 INFO = "Wiphy phy0\n\tSupported interface modes:\n\t\t * managed\n\t\t * AP\n\tBand 1:\n"
 CANDIDATE = {"name": "wlan1", "phy": "phy0", "type": "managed"}
-
-
+MAC = "02:00:00:00:00:01"
+SNAPSHOT = {"name": "wlan1", "phy": "phy3", "mac": MAC, "bus": "USB", "usb_path": "2-2.2", "driver": "ath9k_htc", "up": False, "managed": True}
+DETAILS = {"bus": "USB", "usb_path": "2-2.2", "driver": "ath9k_htc"}
 class DiscoveryTests(unittest.TestCase):
     def run_fake(self, *, flags=None, addresses=None, master=None, routes=None, info=INFO, link="Not connected."):
         def run(*args):
@@ -104,42 +97,7 @@ class DiscoveryTests(unittest.TestCase):
 
 
 class LeaseTests(unittest.TestCase):
-    def test_host_validation_accepts_phy_info_without_namespace_command_text(self):
-        for name in ("wlp2s0", "wlp4s0f3u2u2"):
-            def radio(*args):
-                if args == ("iw", "dev"):
-                    return IW.replace("wlan1", name)
-                if args[:2] == ("iw", "phy"):
-                    return INFO + "\tSupported commands:\n\t\t * new_interface\n\t\t * connect\n"
-                if args[-2:] == ("get", "power_save"):
-                    return "Power save: on"
-                if args[0] == "ip" and args[2] in ("address", "link"):
-                    return json.dumps([{"ifindex": 4, "address": "dc:e9:94:8c:9a:1b", "flags": ["UP"], "addr_info": []}])
-                if args[0] == "ip":
-                    return "[]"
-                return "Not connected."
-            def inspect(candidate, interfaces, **kwargs):
-                return wifi.inspect(candidate, interfaces, run=radio, **kwargs)
-            with self.subTest(name=name), patch.object(broker, "command", side_effect=radio), \
-                 patch.object(broker, "inspect", side_effect=inspect), patch.object(broker, "nm_properties", return_value=True), \
-                 patch.object(broker, "radio_unblocked"), patch.object(broker, "nm_set") as mutate:
-                adapter, snapshot = broker.validate_host(name, lambda *_: None)
-                self.assertEqual(adapter.name, name)
-                self.assertEqual(snapshot["power_save"], "on")
-                mutate.assert_not_called()
 
-    def test_kernel_rejected_namespace_move_still_restores_and_fails(self):
-        from types import SimpleNamespace
-        adapter = wifi.Adapter("wlan1", "phy0", 4)
-        snapshot = {"managed": True, "name": "wlan1", "phy": "phy0"}
-        with tempfile.TemporaryDirectory() as temp, patch.object(broker, "DATA", Path(temp)), \
-             patch.object(broker, "check_target"), patch.object(broker, "validate_host", return_value=(adapter, snapshot)), \
-             patch.object(broker, "nm_set"), patch.object(broker, "command", return_value=IW), \
-             patch.object(broker, "inspect"), patch.object(broker.subprocess, "run", return_value=SimpleNamespace(returncode=1, stderr="Operation not supported")), \
-             patch.object(broker, "restore") as restore:
-            with self.assertRaisesRegex(wifi.PreflightError, "Namespace handover failed.*Operation not supported"):
-                broker.handover(8, "wlan1", lambda *_: None)
-            restore.assert_called_once_with(snapshot, unittest.mock.ANY, wait=2)
 
     def test_only_requested_interface_and_safe_subnet(self):
         env = {"interface": "wlan1", "UNTUYAOS3_ALLOWED_IFACE": "wlan1", "ip": "192.168.176.2", "subnet": "255.255.255.0"}
@@ -150,6 +108,7 @@ class LeaseTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             dhcp.validate_lease(env, [{"dst": "192.168.176.0/24", "dev": "eth0"}])
 
+
     def test_numeric_input_only_and_config_validation(self):
         runner = Runner({}, None, threading.Event())
         for choice in ("$(id)", "1\n2", "", None, "-1"):
@@ -158,64 +117,6 @@ class LeaseTests(unittest.TestCase):
         for options in ({}, {"interface": "wlan1", "pairing_token": "short"}):
             with self.assertRaises(ValueError):
                 protocol.validate_options(options)
-
-    @unittest.skipUnless(sys.platform == "linux", "Linux namespace/SCM_RIGHTS API")
-    def test_real_fd_transport_and_namespace_type_rejection(self):
-        left, right = socket.socketpair(socket.AF_UNIX, socket.SOCK_SEQPACKET)
-        self.addCleanup(left.close)
-        self.addCleanup(right.close)
-        with open("/proc/self/ns/net", "rb") as original:
-            protocol.send(left, {"interface": "wlan1"}, original.fileno())
-            data, fds = protocol.receive(right)
-            self.assertEqual(data["interface"], "wlan1")
-            self.assertEqual(os.fstat(fds[0]).st_ino, os.fstat(original.fileno()).st_ino)
-            try:
-                with self.assertRaises(ValueError):  # Cannot move a radio to the host's own namespace.
-                    broker.check_target(fds[0])
-            finally:
-                os.close(fds[0])
-        with tempfile.TemporaryFile() as file:
-            with self.assertRaises(OSError):
-                broker.check_target(file.fileno())
-
-    @unittest.skipUnless(sys.platform == "linux", "Linux Unix socket transport")
-    def test_mutual_authentication_and_wrong_secret(self):
-        for correct in (True, False):
-            left, right = socket.socketpair(socket.AF_UNIX, socket.SOCK_SEQPACKET)
-            left.settimeout(2)
-            right.settimeout(2)
-            errors = []
-            def helper():
-                try:
-                    protocol.server_authenticate(right, "wlan1", "private-" * 5)
-                except Exception as exc:
-                    errors.append(exc)
-                finally:
-                    right.close()
-            thread = threading.Thread(target=helper)
-            thread.start()
-            try:
-                if correct:
-                    protocol.client_authenticate(left, "wlan1", "private-" * 5)
-                else:
-                    with self.assertRaises((ValueError, ConnectionError)):
-                        protocol.client_authenticate(left, "wlan1", "incorrect-" * 5)
-            finally:
-                left.close()
-                thread.join(3)
-            self.assertEqual(bool(errors), not correct)
-
-    def test_failed_handover_restores_host_state(self):
-        adapter = wifi.Adapter("wlan1", "phy0", 4)
-        snapshot = {"managed": True, "name": "wlan1", "phy": "phy0"}
-        with tempfile.TemporaryDirectory() as temp, patch.object(broker, "DATA", Path(temp)), \
-             patch.object(broker, "check_target"), patch.object(broker, "validate_host", return_value=(adapter, snapshot)), \
-             patch.object(broker, "nm_set"), patch.object(broker, "command", return_value=IW), \
-             patch.object(broker, "inspect"), patch.object(broker.subprocess, "run", side_effect=OSError("driver unavailable")), \
-             patch.object(broker, "restore") as restore:
-            with self.assertRaises(OSError):
-                broker.handover(8, "wlan1", lambda *_: None)
-            restore.assert_called_once_with(snapshot, unittest.mock.ANY, wait=2)
 
 
 class IngressTests(unittest.TestCase):
@@ -492,7 +393,3 @@ class PtyTests(unittest.TestCase):
             self.assertEqual(runner.state, "failed")
             self.assertFalse(runner.fatal.is_set())
             runner.completed.assert_called_once()
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -1,12 +1,12 @@
 <h1 align="center">UnTuyaOS3 für Home Assistant</h1>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/seb5594/Home-Assistant-Anti-Tuya-Apps/main/untuyaos3/logo.png" alt="UnTuyaOS3" width="360" height="129">
+  <img src="https://raw.githubusercontent.com/seb5594/Home-Assistant-UnTuyaOS3-App/main/untuyaos3/logo.png" alt="UnTuyaOS3" width="360" height="129">
 </p>
 
 <p align="center">
-  <a href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fseb5594%2FHome-Assistant-Anti-Tuya-Apps"><img src="https://img.shields.io/static/v1?label=Home%20Assistant&amp;message=Repository%20hinzuf%C3%BCgen&amp;color=18BCF2&amp;logo=homeassistant&amp;logoColor=white&amp;style=for-the-badge" alt="Repository hinzufügen" height="28"></a>
-  <a href="https://github.com/seb5594/Home-Assistant-Anti-Tuya-Apps/releases/latest"><img src="https://img.shields.io/github/v/release/seb5594/Home-Assistant-Anti-Tuya-Apps?style=for-the-badge&amp;color=1877A5" alt="Version" height="28"></a>
+  <a href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fseb5594%2FHome-Assistant-UnTuyaOS3-App"><img src="https://img.shields.io/static/v1?label=Home%20Assistant&amp;message=Repository%20hinzuf%C3%BCgen&amp;color=18BCF2&amp;logo=homeassistant&amp;logoColor=white&amp;style=for-the-badge" alt="Repository hinzufügen" height="28"></a>
+  <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/releases/latest"><img src="https://img.shields.io/github/v/release/seb5594/Home-Assistant-UnTuyaOS3-App?style=for-the-badge&amp;color=1877A5" alt="Version" height="28"></a>
 </p>
 
 ---
@@ -27,7 +27,6 @@
 
 ## Was ist das?
 
-**Neu auf `dev`: [Tuya Breaker](tuya_breaker/DOCS.md)** vereint UnTuyaOS3 und das klassische Tuya CloudCutter in einer experimentellen WebUI. Die bisherige App bleibt verfügbar; beide können denselben WLAN-Helper nutzen, jeweils eine Sitzung zur Zeit. Die neue CloudCutter-Integration ist noch nicht an echter Hardware getestet.
 
 Viele günstige Smart-Home-Geräte (zum Beispiel die LSC-Lampen, LED-Streifen und Steckdosenleisten von Action) sprechen nur mit der Tuya-Cloud. [UnTuyaOS3](https://github.com/tuya-cloudcutter/UnTuyaOS3) kann auf **manche** davon per WLAN eine offene Firmware aufspielen, ohne das Gehäuse zu öffnen, sofern ihre Firmware vom Exploit betroffen ist.
 
@@ -79,8 +78,8 @@ Eingebautes PCIe-WLAN ist ebenfalls abgedeckt (Intel `iwlwifi`, Atheros, MediaTe
 
 ## Installation
 
-1. In Home Assistant **Einstellungen → Apps → App-Store** öffnen, dann **⋮ → Repositories** und `https://github.com/seb5594/Home-Assistant-Anti-Tuya-Apps` hinzufügen. (Ältere Versionen nennen das *Add-ons*.)
-2. **Beide** Apps installieren: **UnTuyaOS3** und **Anti Tuya WiFi Helper**. Zwei Apps sind Absicht, [hier steht warum](docs/architecture.md#why-two-apps) (englisch).
+1. In Home Assistant **Einstellungen → Apps → App-Store** öffnen, dann **⋮ → Repositories** und `https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App` hinzufügen. (Ältere Versionen nennen das *Add-ons*.)
+2. **Beide** Apps installieren: **UnTuyaOS3** und den separaten **[WiFi Namespace Helper](https://github.com/seb5594/Home-Assistant-WiFi-Helper-App)** aus dem Hauptkatalog. Zwei Apps sind Absicht, [hier steht warum](docs/architecture.md#why-two-apps) (englisch).
 3. Ein Kopplungsgeheimnis mit mindestens 32 Zeichen wählen und in den **Konfigurations**-Tabs beider Apps denselben Wert eintragen. Kein gutes zur Hand? Öffne zuerst die Web-Oberfläche der Haupt-App, drück auf **Generate pairing secret** und füge das Ergebnis in beide ein.
 4. **Schutzmodus** und AppArmor angeschaltet lassen. Den Helper starten, im Log auf *Ready* warten, dann die Haupt-App starten und **Web-UI öffnen** drücken.
 
@@ -111,7 +110,7 @@ Das Schließen des Browsers bricht die Sitzung nicht ab, beim Wiederkommen wird 
 
 ## Hilf bei der Kompatibilitätsliste
 
-Welche Geräte, Chips und Adapter funktionieren, weiß man nur, weil Leute es ausprobieren. Wenn du etwas geflasht hast (oder daran gescheitert bist), sag es mir. Der Button **Report a device** unten in der Web-Oberfläche öffnet ein Formular, in dem App-Version und Adapter schon eingetragen sind. Du kannst das [Formular auch direkt öffnen](https://github.com/seb5594/Home-Assistant-Anti-Tuya-Apps/issues/new?template=device-report.yml). Fehlschläge sind genauso nützlich wie Erfolge. Bitte lass Schlüssel, UUIDs und Geräte-IDs weg, das Issue ist öffentlich.
+Welche Geräte, Chips und Adapter funktionieren, weiß man nur, weil Leute es ausprobieren. Wenn du etwas geflasht hast (oder daran gescheitert bist), sag es mir. Der Button **Report a device** unten in der Web-Oberfläche öffnet ein Formular, in dem App-Version und Adapter schon eingetragen sind. Du kannst das [Formular auch direkt öffnen](https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/issues/new?template=device-report.yml). Fehlschläge sind genauso nützlich wie Erfolge. Bitte lass Schlüssel, UUIDs und Geräte-IDs weg, das Issue ist öffentlich.
 
 ## Sicherheit in Kürze
 
@@ -142,6 +141,10 @@ Alle meine Projekte entstehen in meiner Freizeit, aus Spaß an der Sache. Trotzd
 
 [MIT](LICENSE).
 
-## Gemeinsames App-Repository
+## Eigenständige Repositories und Rückkehr zu 1.0.0
 
-Das Projekt heißt jetzt **Home Assistant Anti Tuya Apps**. Im [Hauptkatalog](https://github.com/seb5594/Home-Assistant-Apps) erscheinen **Tuya Breaker (Experimental)**, **UnTuyaOS3** und **Anti Tuya WiFi Helper** jeweils separat. Den Helper nur einmal installieren und jeweils eine der beiden Haupt-Apps starten. Seine technische Kennung bleibt für bestehende Installationen und Wiederherstellungsdaten erhalten.
+Diese Repository enthält wieder ausschließlich **UnTuyaOS3**, Version **1.0.0**. Der allgemeine [WiFi Namespace Helper](https://github.com/seb5594/Home-Assistant-WiFi-Helper-App) und [Tuya Breaker](https://github.com/seb5594/Home-Assistant-Tuya-Breaker-App) haben eigene Repositories und unabhängige Versionen. Beide Apps aus dem [Hauptkatalog](https://github.com/seb5594/Home-Assistant-Apps) installieren. Der Helper besitzt die neue Kennung `wifi_helper` und ein allgemein benanntes privates Socket-Verzeichnis.
+
+Vor dem Umzug alle Sitzungen beenden und die erfolgreiche Adapter-Rückgabe im alten Helper prüfen. Die [deutsche Migrationsanleitung](https://github.com/seb5594/Home-Assistant-WiFi-Helper-App/blob/dev/README.de.md) beachten; alte Wiederherstellungsdaten nicht löschen, solange Recovery aussteht.
+
+Home Assistant führt kein automatisches Downgrade von 1.2 Beta auf 1.0.0 durch. Konfiguration und private Firmware-Bibliothek mit der Backup-Oberfläche sichern und die eigenständige App bei Bedarf im App-Store neu installieren bzw. neu erstellen. Dasselbe private Kopplungsgeheimnis übernehmen. Keine Host-Befehle nötig. Der historische Git-Tag `v1.0.0` und dessen Release-Dateien bleiben erhalten; der aktuelle `dev`-Stand und der Katalog enthalten die neue Einzel-App-Struktur.

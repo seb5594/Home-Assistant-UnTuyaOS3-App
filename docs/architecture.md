@@ -21,7 +21,7 @@ Two apps cost some convenience, which is why the main app does a lot to hide it:
 
 ## The two apps at a glance
 
-| Access | UnTuyaOS3 (main app) | Anti Tuya WiFi Helper |
+| Access | UnTuyaOS3 (main app) | WiFi Namespace Helper |
 | --- | --- | --- |
 | Network | Isolated container namespace | Host network, needed to hand over the radio |
 | Capabilities | `NET_ADMIN`, `NET_RAW`, but only inside its own namespace | `NET_ADMIN` |
@@ -36,7 +36,7 @@ Two apps cost some convenience, which is why the main app does a lot to hide it:
 
 ## How the apps trust each other
 
-The apps talk over a Unix socket in `/share/untuyaos3-private/`. Namespace descriptors are passed with `SCM_RIGHTS`, which works only locally: a descriptor cannot travel over TCP or HTTP. Container names or DNS names are addresses, not credentials, so they play no role.
+The apps talk over a Unix socket in `/share/wifi-helper-private/`. Namespace descriptors are passed with `SCM_RIGHTS`, which works only locally: a descriptor cannot travel over TCP or HTTP. Container names or DNS names are addresses, not credentials, so they play no role.
 
 Before any descriptor is accepted, both sides prove they know the pairing secret with a nonce-based HMAC challenge. The secret never crosses the socket, and the protocol version and the requested scope are part of the proof. When the helper hands a radio over it refuses its own host namespace as the destination. When the radio comes back, the helper briefly sends a read-only descriptor of its namespace to the authenticated app, which passes it to a fixed `iw` command for the leased radio and closes it again. Nobody ever enters the host namespace, and neither `setns`, host PID nor `SYS_ADMIN` is involved.
 
@@ -51,10 +51,10 @@ Network namespaces separate networking, not the whole kernel. A physical radio i
 ```
 project.json            single source: version, base image, pins, options, texts
 tools/sync_project.py   generates config.yaml, Dockerfile, translations, build_info.json
-shared/                 code used by both apps (copied into each app by the tool above)
+vendor/wifi_helper/     pinned general helper SDK, copied into the single app by the generator
 templates/              Dockerfile templates
 untuyaos3/              main app: web UI, session runner, adapter handling
-untuyaos3_wifi/         helper: broker that hands radios over
+WiFi Helper repository  independent broker, SDK and developer guides
 tests/                  unit tests (no hardware needed)
 docs/                   you are here
 assets/branding/        SVG sources of the icons and logos
@@ -78,16 +78,16 @@ Home Assistant builds every app from its own folder, which is why the generated 
 | `static/` | The Web UI |
 | `integration/patch_upstream.py` | The reviewed patches to the upstream scripts |
 
-### Helper (`untuyaos3_wifi/app/`)
+### External WiFi Namespace Helper
 
 | Module | What it does |
 | --- | --- |
 | `broker.py` | Serves inventory, lease and return requests; owns recovery |
 | `inventory.py` | Read-only look at adapters, USB devices and loaded drivers |
 
-### Shared (`shared/`)
+### Pinned SDK and local logging
 
-`protocol.py` (handshake and messages), `wifi.py` (adapter checks and cleanup), `journal.py` (logging).
+`vendor/wifi_helper/` contains the independent helper SDK, its source commit and checksums. The generator copies its authentication, lease and adapter-guard modules into the app build context. `shared/journal.py` is this app's owned logging implementation. App release numbers are independent; only the wire protocol must match.
 
 ## Upstream patches
 
@@ -95,12 +95,5 @@ UnTuyaOS3 itself is used as it comes, with a short list of patches applied at im
 
 A scheduled workflow watches for new upstream releases and opens a pull request against `dev` when one appears. See `.github/workflows/upstream-release.yml`.
 
-## Tuya Breaker: combined app on dev
 
-The new experimental `tuya_breaker/` app embeds UnTuyaOS3 and classic CloudCutter in one Ingress UI. It reuses the original app modules through `tools/sync_project.py`, rather than maintaining a second copy by hand. Breaker-specific modules handle tool selection, the bounded profile API and the CloudCutter workflow. The original UnTuyaOS3 app stays available.
-
-Both tools use Python 3.13 in separate virtual environments because their `sslpsk3` APIs differ. They share one runner/lease; tool changes are refused during assignment, execution, cleanup and return. No nested Docker, host network, Supervisor API or host D-Bus is added to the main container. The existing helper can serve either main app, one lease at a time.
-
-CloudCutter's Docker/host launcher is never invoked. The embedded controller drives only the leased radio, uses the existing verified association/DHCP target, tests real AP startup before exploitation, and runs foreground hostapd/dnsmasq/MQTT processes in its own process group. HTTP/TLS binds only to the radio's AP IP; MQTT uses that IP plus loopback; DNS/DHCP binds the leased interface. A per-run nftables forward chain with drop policy blocks routing from that AP to the container uplink. Only Breaker's AppArmor profile additionally allows the standard low-port `net_bind_service` capability. Shared cleanup removes the filter and restores managed mode before returning the radio.
-
-The controller uses fixed subprocess arguments and validated profile/image identifiers; it exposes no arbitrary shell hooks. Configuration secrets are omitted from API status and kept only for the attempt. Generated local device keys are retained privately for explicit download. See [Tuya Breaker's documentation](../tuya_breaker/DOCS.md) for current limits and evidence.
+The independent helper API and its English/German integration guides live at https://github.com/seb5594/Home-Assistant-WiFi-Helper-App. Tuya Breaker lives at https://github.com/seb5594/Home-Assistant-Tuya-Breaker-App and vendors a pinned UnTuyaOS3 base snapshot. This repository contains only the standalone main app.

@@ -1,87 +1,23 @@
-# Contributing
+# Contributing to standalone UnTuyaOS3
 
-Thanks for looking under the hood. This file is the short tour: how to run the checks, how the generated files work, and what a release needs.
+This repository contains one app, `untuyaos3/`. Its version and build pins live in `project.json`; `tools/sync_project.py` renders the committed config, Dockerfile, translations, build metadata and pinned SDK copies. Edit owned code in `untuyaos3/app/`, the Dockerfile layout in `templates/`, and logging in `shared/journal.py`. Never edit generated copies.
 
-## Quick start
+The independent WiFi Namespace Helper owns the radio API and SDK. `vendor/wifi_helper/UPSTREAM.json` records a reviewed helper commit and file checksums. Update from that exact upstream source, review the security diff and regenerate. Do not modify a vendored API in place or treat matching app versions as compatibility: wire protocol 3 is the contract.
 
-Use Python 3.10 or newer for the portable tests (the images run 3.13) and install PyYAML. Then:
+## Checks
 
-```bash
-python tools/sync_project.py --check
-python -m unittest discover -s tests -v
-node --check untuyaos3/app/static/app.js
-node tests/test_webui.cjs
-```
+Developer tools are Python 3.11+ with PyYAML, Node.js and Docker. Run `python tools/sync_project.py --check`, `python -m unittest discover -s tests -v` and `node tests/test_webui.cjs`. The project CI also validates AppArmor and runs the real patched upstream inside the built image with stub network commands. Build only `untuyaos3/`; there is no helper or Breaker build context here.
 
-To build the images locally:
-
-```bash
-docker build -t untuyaos3:dev untuyaos3
-docker build -t untuyaos3-wifi:dev untuyaos3_wifi
-```
-
-The PTY and `SCM_RIGHTS` tests need Linux; on Windows only the portable ones run. All wireless commands are mocked, so no automated test flashes a device or touches a real network.
-
-What the tests cover, roughly: the helper handshake and handover, recovery after a vanished USB adapter, association (incomplete supplicant state, wrong BSSID, scan misses, deadlines), DHCP to OTA target, byte accounting of the transfer, request-body framing, the Web UI's rendering and helper card, upstream release tracking and the packaging rules (permissions, AppArmor, translations). Each main-app image additionally runs the real, patched upstream connection script with stub commands and checks that a failed association stops it before DHCP.
-
-## Where to edit what
-
-| You want to change | Edit | Then |
-| --- | --- | --- |
-| Version, base image, package pins, options, descriptions, translations | `project.json` | `python tools/sync_project.py` |
-| Code both apps use (`protocol.py`, `wifi.py`, `journal.py`) | `shared/` | `python tools/sync_project.py` |
-| Dockerfile layout | `templates/` | `python tools/sync_project.py` |
-| App code | `untuyaos3/app/` or `untuyaos3_wifi/app/` | |
-| Icons and logos | `assets/branding/*.svg` | `node tools/render_branding.cjs` |
-
-Home Assistant builds each app straight from its own folder, so everything generated has to be committed. Never edit a generated `config.yaml`, `Dockerfile`, translation, `build_info.json` or a copied shared module by hand; CI fails when they drift. Add a changelog entry to every app in the release bundle.
-
-Tuya Breaker adds a third build context, `tuya_breaker/`, with the same central release version. The generator copies the established main-app Python modules, base UI and UnTuyaOS3 patch into it. Edit those originals in `untuyaos3/`; edit Breaker-specific `breaker*.py`, `cloudcutter_session.py`, `static/breaker.js`, `ui/tools.html`, `ui/style.css` and `integration/patch_cloudcutter.py` in `tuya_breaker/`. Its Dockerfile builds two Python 3.13 virtual environments so the tools retain their different PSK dependency APIs. Pin the reviewed CloudCutter fork commit in `project.json`. Add changelog entries for all three build contexts.
-
-Optional browser QA runs `tools/check_breaker_ui.cjs` with Playwright and a browser. It uses only canned responses, tests narrow screens and session locks, and refreshes the phone screenshots. `PLAYWRIGHT_CHANNEL=msedge` selects an installed Edge browser. No real device is contacted.
+PTY/descriptor tests require Linux. Host Wi-Fi operations and target writes are mocked. Hardware behavior is a separate validation step: keep Protection mode and AppArmor enabled, verify explicit adapter selection, USB loss, helper loss, cancellation, DHCP/association boundaries, clean return and unchanged host Ethernet/routes. Review changes near privileges or radio ownership before merging; never add host networking as fallback.
 
 ## Branches and releases
 
-- `main` is the default branch and the only one that publishes. `dev` is where work lands first. Open pull requests against `dev`, merge `dev` into `main` when it is ready.
-- A new version in `project.json` is what makes the pipeline publish. Versions such as `1.1.0` create a normal release; anything with a suffix (`1.1.0-beta.1`) becomes a pre-release and leaves the stable `latest` tags alone.
-- The pipeline is the standard app caller generated by `hass-workflows`, pinned to a reviewed engine commit. `.github/apps.json` declares all three apps as one release bundle, so they always share a version. The engine validates all apps, runs `.github/checks/check_apps.py`, builds amd64 and aarch64 images, runs the image tests in `.github/tests/runtime.sh` and publishes the images with one GitHub release. Pull requests never publish.
-- Use the engine's `managed.py sync app <engine-sha>` to update the caller workflow, Renovate, Dependabot and funding files, and its `readme.py` to refresh the generated README header. Do not replace the caller with your own release logic.
+`dev` is the default development branch and publishes through the pinned hass-workflows caller after validation. Pull requests never publish. `.github/apps.json` declares this one app. New versions are independent of both companion repositories. The requested 1.0.0 reset does not move the historical `v1.0.0` tag or overwrite its published images/assets; current source/catalog and the migration guide describe the standalone snapshot. Future version bumps create new releases normally.
+
+Use the engine's managed-file generator to update CI, dependency settings and generated README sections. Keep `.github/checks/check_apps.py` and `.github/tests/runtime.sh` as this project's checks. Do not substitute a separate release pipeline.
 
 ## Following upstream
 
-The upstream project is pinned by commit in `project.json` (`upstream_revision`). `.github/workflows/upstream-release.yml` runs daily, asks GitHub whether `tuya-cloudcutter/UnTuyaOS3` has a newer release (`python tools/follow_upstream.py check`) and, if so, opens a pull request against `dev` that:
+`tools/follow_upstream.py` and the scheduled upstream-release workflow check the pinned UnTuyaOS3 revision, create a reviewable version update and verify exact-snippet patches. Only this app's version/changelog changes. Before merging, read upstream shell/network changes, repeat the privilege review, build both architectures and test a known-compatible device on real hardware.
 
-- pins the new revision and raises the patch version,
-- adds a changelog entry to both apps,
-- tells you whether `untuyaos3/integration/patch_upstream.py` still applies.
-
-Start it by hand from the Actions tab, with *head* instead of *release*, if you want to follow upstream's default branch. Give the repository a secret `ORCHESTRATION_PAT` (the same one the CI uses), otherwise the pull request is created but GitHub does not run CI on it.
-
-Every upstream patch replaces one exact snippet and the image build fails if it no longer matches. That is intended. Before merging a new revision:
-
-1. Read the upstream diff, especially shell commands and network calls.
-2. Repeat the privilege review: nothing may gain host networking, DNS or default-route changes, global rfkill changes or broader mounts. Do not add a host-network fallback.
-3. Let CI build both images.
-4. Flash a known-compatible device on real hardware.
-
-## Hardware checklist before a release
-
-CI checks software and profile syntax, not what happens on real Home Assistant OS. Before you tag a release that changes anything near the radio, the namespace handover or the cleanup, go through this on real hardware:
-
-- Install both apps with Protection mode and the custom AppArmor profiles enabled, use every feature and look for audit denials.
-- One eligible adapter is selected automatically, several require a choice, and a USB adapter without driver or interface is explained in the Web UI.
-- Missing, busy and blocked adapters, addresses, routes, a shared PHY, a missing AP mode, no D-Bus and no namespace support each block the assignment without closing the diagnostics UI.
-- With Ethernet as the management connection, test an integrated and a USB adapter. Host Ethernet, DNS and the default route must stay exactly as they were.
-- Inside the main app's namespace only the container network and the assigned radio are visible.
-- Numbered prompts, invalid choices, verbose output, browser reconnect, firmware upload, log download and *Clear logs* during a run. A restart removes only old app logs.
-- Flash a known-compatible device with verified UG firmware and check the result.
-- Cancellation, timeout, USB removal, stopping either app first, restarting both and a reboot all recover.
-- AppArmor blocks unrelated files in `/share`, and the helper rejects requests without the right pairing secret.
-
-## Compatibility reports
-
-Users report devices through the issue form `.github/ISSUE_TEMPLATE/device-report.yml` (the Web UI links to it with some fields prefilled). Those fields are referenced by `tools/compat_report.py` and by the Web UI, and tests keep all three in step. See [docs/compatibility.md](docs/compatibility.md) for how the list is maintained.
-
-## Style
-
-Code and comments are in English. Keep functions small, name constants instead of sprinkling numbers, and write a docstring that says *why* something exists when the code cannot. User-facing messages should make sense to someone who has never seen the source: they are shown verbatim in the Web UI.
+The WiFi Helper and Tuya Breaker repositories contain their own development docs and release histories. End-user setup belongs in the Home Assistant UI and must never require host shell commands.

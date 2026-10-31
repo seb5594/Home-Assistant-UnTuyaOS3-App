@@ -25,6 +25,6 @@ ENV PATH=/opt/venv/bin:$PATH PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 UNTUYA
 WORKDIR /opt/webapp
 LABEL io.hass.name="UnTuyaOS3" io.hass.description="Interactive UnTuyaOS3 with Ingress and live logs" \
     io.hass.type="addon" io.hass.version="${BUILD_VERSION}" io.hass.arch="${BUILD_ARCH}" \
-    org.opencontainers.image.source="https://github.com/seb5594/Home-Assistant-Anti-Tuya-Apps"
+    org.opencontainers.image.source="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App"
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["/run.sh"]

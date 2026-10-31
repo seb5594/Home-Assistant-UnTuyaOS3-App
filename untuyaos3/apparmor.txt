@@ -22,7 +22,7 @@ profile untuyaos3 flags=(attach_disconnected,mediate_deleted) {
   /dev/tty rw,
   # The Supervisor mounts /share, but only this IPC directory is allowed.
   /share/ r,
-  /share/untuyaos3-private/{,**} rwk,
+  /share/wifi-helper-private/{,**} rwk,
   /etc/resolv.conf rw,
   /opt/untuyaos3/ rw,
   /opt/untuyaos3/custom-firmware{,/,/**} rw,
