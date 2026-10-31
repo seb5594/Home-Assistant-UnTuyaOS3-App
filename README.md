@@ -169,3 +169,9 @@ If my work helped you or turned out to be useful, show your appreciation with a 
 
 Published under the [MIT License](LICENSE).
 <!-- license:end -->
+
+## Store still shows the previous companion or version
+
+Existing Home Assistant repository checkouts keep following the branch they originally cloned. The legacy `main` branch is maintained as a fast-forward mirror of tested, published `dev` releases so these installations also receive the standalone app. Refresh the App Store from its menu after a release. GitHub container-package deletion does not refresh the store catalog. Use the main Home Assistant Apps catalog for WiFi App Helper and Tuya Breaker. An already installed old helper may remain listed separately; stop all sessions, verify radio recovery and make a backup before removing that old installation. Never delete recovery data while an adapter lease is pending.
+
+For stale entries in the **main catalog** after the bundle split, follow [App Store checkout repair](https://github.com/seb5594/Home-Assistant-Apps/blob/main/docs/store-refresh.md). Re-adding the exact same catalog URL removes stale submodule checkouts; a normal store reload can leave them behind.

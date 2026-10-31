@@ -1,0 +1,51 @@
+name: Synchronize Home Assistant store branch
+
+on:
+  workflow_run:
+    workflows: [Validate and release app]
+    types: [completed]
+    branches: [dev]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: home-assistant-store-branch
+  cancel-in-progress: false
+
+jobs:
+  synchronize:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+      - name: Publish the tested release to existing main-branch store checkouts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(python -c 'import json; print(json.load(open("project.json"))["version"])')
+          # A successful draft/build is not a published release.
+          if ! gh release view "v$version" --repo "$GITHUB_REPOSITORY" --json isDraft --jq 'select(.isDraft == false) | true' | grep -qx true; then
+            echo "No published release for $version; main is unchanged."
+            exit 0
+          fi
+          git fetch origin main
+          if git merge-base --is-ancestor "$RELEASE_SHA" origin/main; then
+            echo "main already contains this tested release."
+            exit 0
+          fi
+          # Refuse to overwrite independent main changes or roll back a newer release.
+          git merge-base --is-ancestor origin/main "$RELEASE_SHA"
+          git push origin "$RELEASE_SHA:refs/heads/main"

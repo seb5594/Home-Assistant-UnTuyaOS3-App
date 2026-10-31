@@ -148,3 +148,9 @@ Diese Repository enthält wieder ausschließlich **UnTuyaOS3**, aktuell Version 
 Vor dem Umzug alle Sitzungen beenden und die erfolgreiche Adapter-Rückgabe im alten Helper prüfen. Die [deutsche Migrationsanleitung](https://github.com/seb5594/Home-Assistant-WiFi-Helper-App/blob/dev/README.de.md) beachten; alte Wiederherstellungsdaten nicht löschen, solange Recovery aussteht.
 
 Home Assistant führt kein automatisches Downgrade von 1.2 Beta auf 1.0.1 durch. Konfiguration und private Firmware-Bibliothek mit der Backup-Oberfläche sichern und die eigenständige App bei Bedarf im App-Store neu installieren bzw. neu erstellen. Dasselbe private Kopplungsgeheimnis übernehmen. Keine Host-Befehle nötig. Der historische Git-Tag `v1.0.0` und dessen Release-Dateien bleiben erhalten; der aktuelle `dev`-Stand und der Katalog enthalten die neue Einzel-App-Struktur.
+
+## App-Store zeigt noch den alten Helper oder Versionsstand
+
+Bestehende Home-Assistant-Checkouts verfolgen weiterhin den ursprünglich geklonten Branch. Der bisherige Branch `main` wird deshalb nach getesteten, veröffentlichten `dev`-Releases ohne Umschreiben der Historie nachgezogen. Danach im Menü des App-Stores nach Updates suchen. Das Löschen von GitHub-Container-Packages aktualisiert den Store-Katalog nicht. WiFi App Helper und Tuya Breaker über den Hauptkatalog installieren. Ein bereits installierter alter Helper kann separat erhalten bleiben: Erst alle Sitzungen beenden, Adapter-Rückgabe prüfen und ein Backup erstellen, dann die alte Installation entfernen. Bei ausstehender Wiederherstellung keine Recovery-Daten löschen.
+
+Bei alten Eintraegen im **Hauptkatalog** nach der Aufteilung die [Store-Reparaturanleitung](https://github.com/seb5594/Home-Assistant-Apps/blob/main/docs/store-refresh.md#deutsch) beachten. Exakt dieselbe Katalog-URL neu hinzufuegen, damit veraltete Submodul-Checkouts verschwinden. Ein normales Neuladen kann diese Verzeichnisse zuruecklassen.
