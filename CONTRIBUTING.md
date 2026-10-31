@@ -2,7 +2,7 @@
 
 This repository contains one app, `untuyaos3/`. Its version and build pins live in `project.json`; `tools/sync_project.py` renders the committed config, Dockerfile, translations, build metadata and pinned SDK copies. Edit owned code in `untuyaos3/app/`, the Dockerfile layout in `templates/`, and logging in `shared/journal.py`. Never edit generated copies.
 
-The independent WiFi Namespace Helper owns the radio API and SDK. `vendor/wifi_helper/UPSTREAM.json` records a reviewed helper commit and file checksums. Update from that exact upstream source, review the security diff and regenerate. Do not modify a vendored API in place or treat matching app versions as compatibility: wire protocol 3 is the contract.
+The independent WiFi App Helper owns the radio API and SDK. `vendor/wifi_helper/UPSTREAM.json` records a reviewed helper commit and file checksums. Update from that exact upstream source, review the security diff and regenerate. Do not modify a vendored API in place or treat matching app versions as compatibility: wire protocol 3 is the contract.
 
 ## Checks
 

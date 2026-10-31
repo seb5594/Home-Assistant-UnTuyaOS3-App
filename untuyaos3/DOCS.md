@@ -6,7 +6,7 @@ This app puts open firmware on **some** Tuya devices over Wi-Fi, using the [UnTu
 
 ## Setup
 
-1. Install **WiFi Namespace Helper** from the main Home Assistant Apps catalog. It is a separate app on purpose, because only it may touch the host network.
+1. Install **WiFi App Helper** from the main Home Assistant Apps catalog. It is a separate app on purpose, because only it may touch the host network.
 2. Enter the **same** pairing secret (at least 32 characters) in the Configuration tab of both apps. The Web UI can generate one for you.
 3. Start the helper and wait for *Ready*, then start this app and open the Web UI. The helper card at the top tells you what is missing. This page finds the helper by itself as soon as it runs.
 

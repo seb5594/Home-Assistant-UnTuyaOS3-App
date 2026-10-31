@@ -79,7 +79,7 @@ Eingebautes PCIe-WLAN ist ebenfalls abgedeckt (Intel `iwlwifi`, Atheros, MediaTe
 ## Installation
 
 1. In Home Assistant **Einstellungen → Apps → App-Store** öffnen, dann **⋮ → Repositories** und `https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App` hinzufügen. (Ältere Versionen nennen das *Add-ons*.)
-2. **Beide** Apps installieren: **UnTuyaOS3** und den separaten **[WiFi Namespace Helper](https://github.com/seb5594/Home-Assistant-WiFi-Helper-App)** aus dem Hauptkatalog. Zwei Apps sind Absicht, [hier steht warum](docs/architecture.md#why-two-apps) (englisch).
+2. **Beide** Apps installieren: **UnTuyaOS3** und den separaten **[WiFi App Helper](https://github.com/seb5594/Home-Assistant-WiFi-Helper-App)** aus dem Hauptkatalog. Zwei Apps sind Absicht, [hier steht warum](docs/architecture.md#why-two-apps) (englisch).
 3. Ein Kopplungsgeheimnis mit mindestens 32 Zeichen wählen und in den **Konfigurations**-Tabs beider Apps denselben Wert eintragen. Kein gutes zur Hand? Öffne zuerst die Web-Oberfläche der Haupt-App, drück auf **Generate pairing secret** und füge das Ergebnis in beide ein.
 4. **Schutzmodus** und AppArmor angeschaltet lassen. Den Helper starten, im Log auf *Ready* warten, dann die Haupt-App starten und **Web-UI öffnen** drücken.
 
@@ -143,8 +143,8 @@ Alle meine Projekte entstehen in meiner Freizeit, aus Spaß an der Sache. Trotzd
 
 ## Eigenständige Repositories und Rückkehr zu 1.0.0
 
-Diese Repository enthält wieder ausschließlich **UnTuyaOS3**, Version **1.0.0**. Der allgemeine [WiFi Namespace Helper](https://github.com/seb5594/Home-Assistant-WiFi-Helper-App) und [Tuya Breaker](https://github.com/seb5594/Home-Assistant-Tuya-Breaker-App) haben eigene Repositories und unabhängige Versionen. Beide Apps aus dem [Hauptkatalog](https://github.com/seb5594/Home-Assistant-Apps) installieren. Der Helper besitzt die neue Kennung `wifi_helper` und ein allgemein benanntes privates Socket-Verzeichnis.
+Diese Repository enthält wieder ausschließlich **UnTuyaOS3**, aktuell Version **1.0.1**. Der allgemeine [WiFi App Helper](https://github.com/seb5594/Home-Assistant-WiFi-Helper-App) und [Tuya Breaker](https://github.com/seb5594/Home-Assistant-Tuya-Breaker-App) haben eigene Repositories und unabhängige Versionen. Beide Apps aus dem [Hauptkatalog](https://github.com/seb5594/Home-Assistant-Apps) installieren. Der Helper besitzt die neue Kennung `wifi_helper` und ein allgemein benanntes privates Socket-Verzeichnis.
 
 Vor dem Umzug alle Sitzungen beenden und die erfolgreiche Adapter-Rückgabe im alten Helper prüfen. Die [deutsche Migrationsanleitung](https://github.com/seb5594/Home-Assistant-WiFi-Helper-App/blob/dev/README.de.md) beachten; alte Wiederherstellungsdaten nicht löschen, solange Recovery aussteht.
 
-Home Assistant führt kein automatisches Downgrade von 1.2 Beta auf 1.0.0 durch. Konfiguration und private Firmware-Bibliothek mit der Backup-Oberfläche sichern und die eigenständige App bei Bedarf im App-Store neu installieren bzw. neu erstellen. Dasselbe private Kopplungsgeheimnis übernehmen. Keine Host-Befehle nötig. Der historische Git-Tag `v1.0.0` und dessen Release-Dateien bleiben erhalten; der aktuelle `dev`-Stand und der Katalog enthalten die neue Einzel-App-Struktur.
+Home Assistant führt kein automatisches Downgrade von 1.2 Beta auf 1.0.1 durch. Konfiguration und private Firmware-Bibliothek mit der Backup-Oberfläche sichern und die eigenständige App bei Bedarf im App-Store neu installieren bzw. neu erstellen. Dasselbe private Kopplungsgeheimnis übernehmen. Keine Host-Befehle nötig. Der historische Git-Tag `v1.0.0` und dessen Release-Dateien bleiben erhalten; der aktuelle `dev`-Stand und der Katalog enthalten die neue Einzel-App-Struktur.

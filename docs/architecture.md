@@ -21,7 +21,7 @@ Two apps cost some convenience, which is why the main app does a lot to hide it:
 
 ## The two apps at a glance
 
-| Access | UnTuyaOS3 (main app) | WiFi Namespace Helper |
+| Access | UnTuyaOS3 (main app) | WiFi App Helper |
 | --- | --- | --- |
 | Network | Isolated container namespace | Host network, needed to hand over the radio |
 | Capabilities | `NET_ADMIN`, `NET_RAW`, but only inside its own namespace | `NET_ADMIN` |
@@ -78,7 +78,7 @@ Home Assistant builds every app from its own folder, which is why the generated 
 | `static/` | The Web UI |
 | `integration/patch_upstream.py` | The reviewed patches to the upstream scripts |
 
-### External WiFi Namespace Helper
+### External WiFi App Helper
 
 | Module | What it does |
 | --- | --- |

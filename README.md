@@ -11,13 +11,14 @@
   <a href="https://paypal.me/seb5594"><img src="https://img.shields.io/static/v1?label=Support&amp;message=PayPal&amp;color=0070BA&amp;logo=paypal&amp;logoColor=white&amp;style=for-the-badge" alt="PayPal" height="40"></a>
   <a href="https://buymeacoffee.com/seb5594"><img src="https://img.shields.io/static/v1?label=Support&amp;message=Buy%20Me%20a%20Coffee&amp;color=FFDD00&amp;logo=buy-me-a-coffee&amp;logoColor=black&amp;style=for-the-badge" alt="Buy Me a Coffee" height="40"></a><br>
   <a href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fseb5594%2FHome-Assistant-Apps"><img src="https://img.shields.io/static/v1?label=Home%20Assistant&amp;message=Add%20app%20repository&amp;color=18BCF2&amp;logo=homeassistant&amp;logoColor=white&amp;style=for-the-badge" alt="Home Assistant" height="28"></a>
-  <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/releases"><img src="https://img.shields.io/static/v1?label=version&amp;message=1.0.0&amp;color=1877A5&amp;style=for-the-badge" alt="version" height="28"></a>
+  <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/releases"><img src="https://img.shields.io/static/v1?label=version&amp;message=1.0.1&amp;color=1877A5&amp;style=for-the-badge" alt="version" height="28"></a>
   <img src="https://img.shields.io/static/v1?label=image%20pulls&amp;message=53&amp;color=1877A5&amp;style=for-the-badge" alt="image pulls" height="28"><br>
   <img src="https://img.shields.io/static/v1?label=arch%20%26%20size&amp;message=amd64%20151.2%20%C2%B7%20aarch64%20165.7%20MiB&amp;color=157F71&amp;style=flat" alt="arch &amp; size" height="20">
   <img src="https://img.shields.io/static/v1?label=stage&amp;message=stable&amp;color=2F855A&amp;style=flat" alt="stage" height="20">
   <img src="https://img.shields.io/static/v1?label=ingress&amp;message=enabled&amp;color=7C3AED&amp;style=flat" alt="ingress" height="20">
   <img src="https://img.shields.io/static/v1?label=mounts%20%28read-write%29&amp;message=share&amp;color=B45309&amp;style=flat" alt="mounts (read-write)" height="20">
   <img src="https://img.shields.io/static/v1?label=privileged&amp;message=NET_ADMIN%2C%20NET_RAW&amp;color=B45309&amp;style=flat" alt="privileged" height="20"><br>
+  <a href="https://github.com/seb5594/Home-Assistant-Apps/stargazers"><img src="https://img.shields.io/github/stars/seb5594/Home-Assistant-UnTuyaOS3-App?label=stars&amp;style=flat" alt="stars" height="20"></a>
   <a href="https://github.com/seb5594/Home-Assistant-Apps/issues"><img src="https://img.shields.io/github/issues/seb5594/Home-Assistant-UnTuyaOS3-App?label=issues&amp;style=flat" alt="issues" height="20"></a>
   <img src="https://img.shields.io/static/v1?label=runtime%20tests&amp;message=6%20passed&amp;color=2F855A&amp;style=flat" alt="runtime tests" height="20">
   <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/seb5594/Home-Assistant-UnTuyaOS3-App/ci.yml?branch=dev&amp;label=checks&amp;style=flat" alt="checks" height="20"></a>
@@ -41,7 +42,7 @@
 
 ## What is this?
 
-This repository contains only the **UnTuyaOS3** main app, version **1.0.0**. Its companion is now the independent [WiFi Namespace Helper](https://github.com/seb5594/Home-Assistant-WiFi-Helper-App). For the combined CloudCutter/Lightleak workspace, see [Tuya Breaker](https://github.com/seb5594/Home-Assistant-Tuya-Breaker-App).
+This repository contains only the **UnTuyaOS3** main app, version **1.0.1**. Its companion is now the independent [WiFi App Helper](https://github.com/seb5594/Home-Assistant-WiFi-Helper-App). For the combined CloudCutter/Lightleak workspace, see [Tuya Breaker](https://github.com/seb5594/Home-Assistant-Tuya-Breaker-App).
 
 A lot of cheap smart-home gadgets (the LSC lamps, LED strips and power strips from Action, for example) only talk to the Tuya cloud. [UnTuyaOS3](https://github.com/tuya-cloudcutter/UnTuyaOS3) can put open firmware on **some** of them over Wi-Fi, without opening the case, as long as their firmware is affected by the exploit.
 
@@ -94,7 +95,7 @@ Built-in PCIe Wi-Fi is covered too (Intel `iwlwifi`, Atheros, MediaTek, Realtek,
 ## Install
 
 1. In Home Assistant open **Settings → Apps → App store**, then **⋮ → Repositories** and add `https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App`. (Older versions call these *Add-ons*.)
-2. Install **UnTuyaOS3** and the separate **[WiFi Namespace Helper](https://github.com/seb5594/Home-Assistant-WiFi-Helper-App)** from the [main catalog](https://github.com/seb5594/Home-Assistant-Apps). They are two apps on purpose, [here is why](docs/architecture.md#why-two-apps).
+2. Install **UnTuyaOS3** and the separate **[WiFi App Helper](https://github.com/seb5594/Home-Assistant-WiFi-Helper-App)** from the [main catalog](https://github.com/seb5594/Home-Assistant-Apps). They are two apps on purpose, [here is why](docs/architecture.md#why-two-apps).
 3. Pick a pairing secret of at least 32 characters and enter the same one in the **Configuration** tab of both apps. Do not have a good one at hand? Open the main app's Web UI first, press **Generate pairing secret** and paste the result into both.
 4. Keep **Protection mode** and AppArmor switched on. Start the helper, wait for *Ready* in its log, then start the main app and press **Open Web UI**.
 
@@ -148,9 +149,9 @@ Not an official Home Assistant or Tuya product. Tuya is a trademark of its owner
 
 ## Standalone migration and version reset
 
-The former three-app bundle is split into independent repositories. This app intentionally returns to **1.0.0**; the helper and Tuya Breaker use their own versions and retain API protocol 3 compatibility. The new helper has slug `wifi_helper` and a generic private socket directory. Follow its [migration guide](https://github.com/seb5594/Home-Assistant-WiFi-Helper-App/blob/dev/README.md#migration-from-anti-tuya-wifi-helper) and complete recovery with the old helper before removing it.
+The former three-app bundle is split into independent repositories. The standalone release line starts at **1.0.0**; the current release is **1.0.1**; the helper and Tuya Breaker use their own versions and retain API protocol 3 compatibility. The new helper has slug `wifi_helper` and a generic private socket directory. Follow its [migration guide](https://github.com/seb5594/Home-Assistant-WiFi-Helper-App/blob/dev/README.md#migration-from-anti-tuya-wifi-helper) and complete recovery with the old helper before removing it.
 
-Home Assistant does not automatically downgrade an installed 1.2 beta to 1.0.0. Back up this app's configuration and private firmware library using Home Assistant's backup UI, then use the App Store to reinstall/rebuild the standalone app when necessary. Keep the same pairing secret. No host terminal is required. The original historical `v1.0.0` Git tag and release assets are preserved; the current `dev` source and catalog contain this standalone layout.
+Home Assistant does not automatically downgrade an installed 1.2 beta to 1.0.1. Back up this app's configuration and private firmware library using Home Assistant's backup UI, then use the App Store to reinstall/rebuild the standalone app when necessary. Keep the same pairing secret. No host terminal is required. The original historical `v1.0.0` Git tag and release assets are preserved; the current `dev` source and catalog contain this standalone layout.
 
 <!-- support:begin (generated, shared text) -->
 ## Say thanks

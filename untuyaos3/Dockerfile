@@ -13,7 +13,7 @@ COPY integration/patch_upstream.py /tmp/patch_upstream.py
 RUN python /tmp/patch_upstream.py /upstream
 
 FROM ${BUILD_FROM}
-ARG BUILD_VERSION=1.0.0
+ARG BUILD_VERSION=1.0.1
 ARG BUILD_ARCH=amd64
 RUN apk add --no-cache bash=5.3.9-r1 iw=6.17-r0 iproute2=7.0.0-r0 busybox=1.37.0-r31 tini=0.19.0-r3 wpa_supplicant=2.11-r4
 COPY --from=build /opt/venv /opt/venv
