@@ -1,8 +1,12 @@
 # Changelog
 
+## 1.0.3
+
+- Add the centered developer credit, app catalog link and support footer.
+
 ## 1.0.2
 
-- Add a centered footer with the developer credit, project link, Home Assistant Apps catalog and PayPal support button.
+- Update the pinned Home Assistant Python base image to Python 3.14 and regenerate the build context from project.json.
 
 ## 1.0.1
 
