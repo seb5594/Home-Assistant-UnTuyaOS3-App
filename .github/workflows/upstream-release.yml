@@ -5,9 +5,9 @@ name: Follow upstream releases
 # patches still apply. The CI of that pull request then builds both images.
 # Nothing is merged or published by this workflow; see tools/follow_upstream.py.
 #
-# Scheduled runs only start from the default branch, which is why this file lives on main.
-# Add a repository secret ORCHESTRATION_PAT (same as ci.yml) so the pull request starts CI;
-# with the plain workflow token the pull request is created but GitHub does not run CI on it.
+# Scheduled runs only start from the default branch (dev).
+# Repository writes use GITHUB_TOKEN; CI is dispatched explicitly after creating the PR.
+# ORCHESTRATION_PAT only needs read access to the private engine used by ci.yml.
 
 on:
   schedule:
@@ -23,19 +23,20 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: write
 
 jobs:
   follow:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      GH_TOKEN: ${{ secrets.ORCHESTRATION_PAT || github.token }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
         with:
           ref: dev
-          token: ${{ secrets.ORCHESTRATION_PAT || github.token }}
-      - uses: actions/setup-python@v6
+          token: ${{ github.token }}
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.13'
       - name: Look for a new upstream release
@@ -80,3 +81,4 @@ jobs:
           git push origin "$BRANCH"
           gh pr create --base dev --head "$BRANCH" \
             --title "Update UnTuyaOS3 to $LABEL" --body-file "$RUNNER_TEMP/body.md"
+          gh workflow run ci.yml --ref "$BRANCH"
