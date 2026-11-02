@@ -1,9 +1,9 @@
 {
-  "version": "1.0.3",
+  "version": "1.0.4",
   "protocol": 3,
   "base_image": "ghcr.io/home-assistant/base-python:3.14-alpine3.24@sha256:9022b084ccaa3383cf171cf26a24ce277aeacbdf3e8c5022b6d89e0492a3a897",
   "upstream_repository": "tuya-cloudcutter/UnTuyaOS3",
-  "upstream_revision": "2111458225c269ddddf5353bf09a1e8f1096d959",
+  "upstream_revision": "14b56c3a69ece2230e424196f1c008534ca07fcd",
   "python_packages": {
     "pycryptodome": "3.23.0",
     "py-datastruct": "2.0.0",

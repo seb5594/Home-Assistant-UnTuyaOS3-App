@@ -2,7 +2,7 @@
 ARG BUILD_FROM=ghcr.io/home-assistant/base-python:3.14-alpine3.24@sha256:9022b084ccaa3383cf171cf26a24ce277aeacbdf3e8c5022b6d89e0492a3a897
 FROM ${BUILD_FROM} AS build
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-ARG UNTUYAOS3_COMMIT=2111458225c269ddddf5353bf09a1e8f1096d959
+ARG UNTUYAOS3_COMMIT=14b56c3a69ece2230e424196f1c008534ca07fcd
 RUN apk add --no-cache build-base=0.5-r4 openssl-dev=3.5.9-r0 curl=8.23.0-r0 ca-certificates=20261020-r0
 RUN mkdir /upstream && curl --fail --location --retry 3 \
     "https://codeload.github.com/tuya-cloudcutter/UnTuyaOS3/tar.gz/${UNTUYAOS3_COMMIT}" \
@@ -13,7 +13,7 @@ COPY integration/patch_upstream.py /tmp/patch_upstream.py
 RUN python /tmp/patch_upstream.py /upstream
 
 FROM ${BUILD_FROM}
-ARG BUILD_VERSION=1.0.3
+ARG BUILD_VERSION=1.0.4
 ARG BUILD_ARCH=amd64
 RUN apk add --no-cache bash=5.3.9-r1 iw=6.17-r0 iproute2=7.0.0-r0 busybox=1.37.0-r31 tini=0.19.0-r3 wpa_supplicant=2.11-r4
 COPY --from=build /opt/venv /opt/venv
