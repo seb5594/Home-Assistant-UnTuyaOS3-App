@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.4
+
+- Update UnTuyaOS3 to v1.0.2 (`14b56c3`). [Upstream changes](https://github.com/tuya-cloudcutter/UnTuyaOS3/compare/2111458...14b56c3).
+
 ## 1.0.3
 
 - Add the centered developer credit, app catalog link and support footer.
