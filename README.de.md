@@ -11,7 +11,7 @@
 
 ---
 
-[English](README.md) · **Deutsch**
+[🇬🇧 English](README.md) · **🇩🇪 Deutsch**
 
 > [!CAUTION]
 > ## Flashen kann dein Gerät unbrauchbar machen. Du machst das auf eigenes Risiko.
