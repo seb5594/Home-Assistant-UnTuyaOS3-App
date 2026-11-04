@@ -25,7 +25,7 @@
 </p>
 <!-- header:end -->
 
-**English** · [Deutsch](README.de.md)
+**🇬🇧 English** · [🇩🇪 Deutsch](README.de.md)
 
 > [!CAUTION]
 > ## Flashing can brick your device. You do this at your own risk.
