@@ -2,7 +2,7 @@ name: Synchronize Home Assistant store branch
 
 on:
   workflow_run:
-    workflows: [Validate and release app]
+    workflows: [Home Assistant CI]
     types: [completed]
     branches: [dev]
 

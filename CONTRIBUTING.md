@@ -14,7 +14,7 @@ PTY/descriptor tests require Linux. Host Wi-Fi operations and target writes are 
 
 `dev` is the default development branch and publishes through the pinned hass-workflows caller after validation. Pull requests never publish. `.github/apps.json` declares this one app. New versions are independent of both companion repositories. The requested 1.0.0 reset does not move the historical `v1.0.0` tag or overwrite its published images/assets; current source/catalog and the migration guide describe the standalone snapshot. Future version bumps create new releases normally.
 
-Use the engine's managed-file generator to update CI, dependency settings and generated README sections. Keep `.github/checks/check_apps.py` and `.github/tests/runtime.sh` as this project's checks. Do not substitute a separate release pipeline.
+Use the engine's managed-file generator to update CI, dependency settings and generated README sections. The engine runs the standalone app checks and the project's `.github/tests/runtime.sh`. Do not substitute a separate release pipeline.
 
 ## Following upstream
 
