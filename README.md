@@ -41,7 +41,7 @@
 
 ## What is this?
 
-This repository contains only the **UnTuyaOS3** main app, version **1.0.1**. Its companion is now the independent [WiFi App Helper](https://github.com/seb5594/Home-Assistant-WiFi-Helper-App). For the combined CloudCutter/Lightleak workspace, see [Tuya Breaker](https://github.com/seb5594/Home-Assistant-Tuya-Breaker-App).
+This repository contains only the **UnTuyaOS3** main app, version **1.0.2**. Its companion is now the independent [WiFi App Helper](https://github.com/seb5594/Home-Assistant-WiFi-Helper-App). For the combined CloudCutter/Lightleak workspace, see [Tuya Breaker](https://github.com/seb5594/Home-Assistant-Tuya-Breaker-App).
 
 A lot of cheap smart-home gadgets (the LSC lamps, LED strips and power strips from Action, for example) only talk to the Tuya cloud. [UnTuyaOS3](https://github.com/tuya-cloudcutter/UnTuyaOS3) can put open firmware on **some** of them over Wi-Fi, without opening the case, as long as their firmware is affected by the exploit.
 
