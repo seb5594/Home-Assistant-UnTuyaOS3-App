@@ -30,12 +30,12 @@ def render_config(spec, slug, app):
 
 def render_dockerfile(spec, slug, app, root):
     """Fill the placeholders (@@NAME@@) of the app's Dockerfile template."""
-    pins = lambda names: " ".join(f"{name}={spec['packages'][name]}" for name in names)
+    packages = lambda names: " ".join(names)
     values = {"BASE_IMAGE": spec["base_image"], "VERSION": spec["version"],
               "UPSTREAM_REPOSITORY": spec.get("upstream_repository", ""),
               "UPSTREAM_REVISION": spec.get("upstream_revision", ""),
-              "BUILD_PACKAGES": pins(spec["build_packages"]),
-              "RUNTIME_PACKAGES": pins(app["packages"]),
+              "BUILD_PACKAGES": packages(spec["build_packages"]),
+              "RUNTIME_PACKAGES": packages(app["packages"]),
               "PYTHON_PACKAGES": " ".join(f"{name}=={version}" for name, version in spec.get("python_packages", {}).items())}
     values.update({"CLOUDCUTTER_REPOSITORY": spec.get("cloudcutter_repository", ""),
                    "CLOUDCUTTER_REVISION": spec.get("cloudcutter_revision", "")})
