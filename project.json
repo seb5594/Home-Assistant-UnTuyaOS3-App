@@ -1,30 +1,13 @@
 {
   "version": "1.0.4",
   "protocol": 3,
-  "base_image": "ghcr.io/seb5594/home-assistant-base-python:3.14-alpine3.24-2026.11.0@sha256:807723c78eeeb57962063875e19b500571a5a6e89423977db6d1123832f1550e",
+  "base_image": "ghcr.io/seb5594/home-assistant-base-python:3.14-alpine3.24-2026.11.0",
   "upstream_repository": "tuya-cloudcutter/UnTuyaOS3",
   "upstream_revision": "14b56c3a69ece2230e424196f1c008534ca07fcd",
   "python_packages": {
     "pycryptodome": "3.23.0",
     "py-datastruct": "2.0.0",
     "sslpsk3": "2.1.0"
-  },
-  "packages": {
-    "bash": "5.3.9-r1",
-    "build-base": "0.5-r4",
-    "busctl": "255.24-r0",
-    "busybox": "1.37.0-r31",
-    "ca-certificates": "20261020-r0",
-    "curl": "8.23.0-r0",
-    "iproute2": "7.0.0-r0",
-    "iw": "6.17-r0",
-    "openssl-dev": "3.5.9-r1",
-    "tini": "0.19.0-r3",
-    "wpa_supplicant": "2.11-r4",
-    "hostapd": "2.11-r4",
-    "dnsmasq": "2.92_p2-r0",
-    "mosquitto": "2.1.2-r1",
-    "nftables": "1.1.6-r1"
   },
   "build_packages": [
     "build-base",
@@ -110,5 +93,6 @@
       }
     }
   },
-  "helper_socket": "/share/wifi-helper-private/wifi.sock"
+  "helper_socket": "/share/wifi-helper-private/wifi.sock",
+  "apk_version_policy": "repository"
 }
