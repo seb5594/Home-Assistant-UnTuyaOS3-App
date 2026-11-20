@@ -135,7 +135,7 @@ Kein offizielles Home-Assistant- oder Tuya-Produkt. Tuya ist eine Marke ihres In
 
 Alle meine Projekte entstehen in meiner Freizeit, aus Spaß an der Sache. Trotzdem stecken viel Zeit und Sorgfalt drin. Wenn dir meine Arbeit geholfen hat, freue ich mich über einen heißen Kaffee für die nächste schlaflose Nacht.
 
-[![PayPal](https://img.shields.io/static/v1?label=Support&message=PayPal&color=0070BA&logo=paypal&logoColor=white&style=for-the-badge)](https://paypal.me/seb5594) [![Buy Me a Coffee](https://img.shields.io/static/v1?label=Support&message=Buy%20Me%20a%20Coffee&color=FFDD00&logo=buy-me-a-coffee&logoColor=black&style=for-the-badge)](https://buymeacoffee.com/seb5594)
+[![PayPal](https://img.shields.io/static/v1?label=Support&message=PayPal&color=0070BA&logo=paypal&logoColor=white&style=for-the-badge)](https://paypal.me/seb5594) [![Buy me a beer](https://raw.githubusercontent.com/seb5594/Home-Assistant-Apps/473dc258f963096745aac327df54950eb9b59066/.github/assets/support-beer.svg)](https://buymeacoffee.com/seb5594)
 
 ## Lizenz
 
