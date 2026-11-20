@@ -3,7 +3,7 @@ ARG BUILD_FROM=ghcr.io/seb5594/home-assistant-base-python:3.14-alpine3.24-2026.1
 FROM ${BUILD_FROM} AS build
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG UNTUYAOS3_COMMIT=14b56c3a69ece2230e424196f1c008534ca07fcd
-RUN apk add --no-cache build-base=0.5-r4 openssl-dev=3.5.9-r0 curl=8.23.0-r0 ca-certificates=20261020-r0
+RUN apk add --no-cache build-base=0.5-r4 openssl-dev=3.5.9-r1 curl=8.23.0-r0 ca-certificates=20261020-r0
 RUN mkdir /upstream && curl --fail --location --retry 3 \
     "https://codeload.github.com/tuya-cloudcutter/UnTuyaOS3/tar.gz/${UNTUYAOS3_COMMIT}" \
     | tar -xz --strip-components=1 -C /upstream \
