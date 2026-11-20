@@ -9,7 +9,7 @@
   <img src="https://img.shields.io/static/v1?label=image%20pulls&amp;message=4&amp;color=1877A5&amp;style=for-the-badge" alt="image pulls" height="28"><br>
   <img src="https://img.shields.io/static/v1?label=stage&amp;message=stable&amp;color=2F855A&amp;style=flat" alt="stage" height="20">
   <img src="https://img.shields.io/static/v1?label=ingress&amp;message=enabled&amp;color=7C3AED&amp;style=flat" alt="ingress" height="20">
-  <img src="https://img.shields.io/static/v1?label=arch%20%26%20size&amp;message=amd64%2050.6%20%C2%B7%20aarch64%2050.3%20MiB&amp;color=157F71&amp;style=flat" alt="arch &amp; size" height="20">
+  <img src="https://img.shields.io/static/v1?label=arch%20%26%20size&amp;message=amd64%2050.6%20%C2%B7%20aarch64%2050.3%20%C2%B7%20armv7%2047.3%20%C2%B7%20armhf%2048.4%20%C2%B7%20i386%2050.7%20MiB&amp;color=157F71&amp;style=flat" alt="arch &amp; size" height="20">
   <a href="https://github.com/seb5594/home-assistant-base-multi-arch"><img src="https://img.shields.io/static/v1?label=base%20image&amp;message=3.14-alpine3.24-2026.11.0&amp;color=1877A5&amp;style=flat" alt="base image" height="20"></a>
   <img src="https://img.shields.io/static/v1?label=mounts%20%28read-write%29&amp;message=share&amp;color=B45309&amp;style=flat" alt="mounts (read-write)" height="20">
   <img src="https://img.shields.io/static/v1?label=privileged&amp;message=NET_ADMIN%2C%20NET_RAW&amp;color=B45309&amp;style=flat" alt="privileged" height="20"><br>
