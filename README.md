@@ -5,8 +5,8 @@
 
 <p align="center">
   <a href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fseb5594%2FHome-Assistant-Apps"><img src="https://img.shields.io/static/v1?label=Home%20Assistant&amp;message=Add%20app%20repository&amp;color=18BCF2&amp;logo=homeassistant&amp;logoColor=white&amp;style=for-the-badge" alt="Home Assistant" height="28"></a><br>
-  <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/releases/tag/v1.0.4"><img src="https://img.shields.io/static/v1?label=app%20version&amp;message=1.0.4&amp;color=1877A5&amp;style=for-the-badge" alt="app version" height="28"></a>
-  <img src="https://img.shields.io/static/v1?label=image%20pulls&amp;message=69&amp;color=1877A5&amp;style=for-the-badge" alt="image pulls" height="28"><br>
+  <a href="https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/releases/tag/v1.0.5"><img src="https://img.shields.io/static/v1?label=app%20version&amp;message=1.0.5&amp;color=1877A5&amp;style=for-the-badge" alt="app version" height="28"></a>
+  <img src="https://img.shields.io/static/v1?label=image%20pulls&amp;message=4&amp;color=1877A5&amp;style=for-the-badge" alt="image pulls" height="28"><br>
   <img src="https://img.shields.io/static/v1?label=stage&amp;message=stable&amp;color=2F855A&amp;style=flat" alt="stage" height="20">
   <img src="https://img.shields.io/static/v1?label=ingress&amp;message=enabled&amp;color=7C3AED&amp;style=flat" alt="ingress" height="20">
   <img src="https://img.shields.io/static/v1?label=arch%20%26%20size&amp;message=amd64%2050.6%20%C2%B7%20aarch64%2050.3%20MiB&amp;color=157F71&amp;style=flat" alt="arch &amp; size" height="20">
@@ -156,7 +156,7 @@ Existing Home Assistant repository checkouts keep following the branch they orig
 For stale entries in the **main catalog** after the bundle split, follow [App Store checkout repair](https://github.com/seb5594/Home-Assistant-Apps/blob/main/docs/store-refresh.md). Re-adding the exact same catalog URL removes stale submodule checkouts; a normal store reload can leave them behind.
 
 <!-- support:begin (generated, shared text) -->
-## ☕ Say thanks
+## Say thanks
 
 All my projects are built in my spare time, just for the fun of it. Still, they take a lot of time and care, and many of the smart home gadgets I buy end up here because I want to make them cloud-free and smart-home ready. Every bit of support means a lot to me.
 
@@ -166,7 +166,7 @@ If my work helped you or turned out to be useful, show your appreciation with a 
 <!-- support:end -->
 
 <!-- license:begin (generated from the license file) -->
-## ⚖️ License
+## License
 
 [![license](https://img.shields.io/static/v1?label=license&message=MIT&color=5B6770&style=flat)](LICENSE)
 
