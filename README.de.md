@@ -25,7 +25,7 @@
 >
 > Eine meiner eigenen Lampen war nach dem Flashen dunkel. Sie lief mit Kickstart, aber ich habe das nur gemerkt, weil ich nach ihrem WLAN gesucht habe. [Die ganze Geschichte](docs/table-lamp-3225458.md) (englisch) solltest du vor dem Start lesen.
 
-## Was ist das?
+## 🤔 Was ist das?
 
 
 Viele günstige Smart-Home-Geräte (zum Beispiel die LSC-Lampen, LED-Streifen und Steckdosenleisten von Action) sprechen nur mit der Tuya-Cloud. [UnTuyaOS3](https://github.com/tuya-cloudcutter/UnTuyaOS3) kann auf **manche** davon per WLAN eine offene Firmware aufspielen, ohne das Gehäuse zu öffnen, sofern ihre Firmware vom Exploit betroffen ist.
@@ -38,7 +38,7 @@ Ich baue sowas in meiner Freizeit, weil ich meine Geräte gern cloudfrei habe. A
 
 > **Ehre, wem Ehre gebührt.** Der Exploit, die Protokollarbeit, die Skripte und die mitgelieferte Firmware stammen von der [tuya-cloudcutter](https://github.com/tuya-cloudcutter)-Community. UnTuyaOS3 ist deren Projekt, den ursprünglichen Exploit hat [kuba2k2](https://github.com/kuba2k2) von [LibreTiny](https://github.com/libretiny-eu/libretiny) gefunden. Ich habe es nur für Home Assistant verpackt: Web-Oberfläche, isolierte WLAN-Behandlung, Logs, Uploads. Ohne deren Arbeit gäbe es nichts davon. Gebt ihrem Repository bitte einen Stern.
 
-## Was bisher geklappt hat
+## ✅ Was bisher geklappt hat
 
 Das sind meine eigenen Geräte, jeweils mit einer Firmware-Version. Details und die WLAN-Adapter stehen in der [Kompatibilitätsliste](docs/compatibility.md).
 
@@ -51,18 +51,18 @@ Das sind meine eigenen Geräte, jeweils mit einer Firmware-Version. Details und 
 
 Ein Flash besteht aus mehreren Stufen, die jede für sich scheitern können: Exploit akzeptiert, Übertragung komplett, Gerät bestätigt, neue Firmware bootet, Ausgänge funktionieren. Die Liste hält sie auseinander. Kickstart ist nur eine allgemeine Setup-Firmware und kennt die Pins deiner Lampe erst, wenn du sie konfigurierst.
 
-## Fertige Firmware für Action-Geräte
+## 🧰 Fertige Firmware für Action-Geräte
 
 Das Flashen ist nur die halbe Miete: Danach braucht das Gerät eine Firmware, die seine Pins kennt. Für Geräte vom Discounter Action (Marken LSC Smart, Battletron und Eurodomest) habe ich eine [Sammlung vorgebauter ESPHome-Firmware](https://gitea.seb5594.xyz/seb5594/Action_Battleton_Eurodomest_LSC-Smart-Custom-Firmware-Collection) zusammengestellt und auf meinem eigenen Gitea abgelegt. Lade dir dort das Image für dein Gerät herunter, lade es in der Firmware-Bibliothek der Web-Oberfläche als UG-Image hoch und flashe es. Gilt nur für Geräte von Action. Es gilt wie immer: Prüfe, ob Gerät und Firmware-Version passen, und rechne damit, das Gerät zu riskieren.
 
-## Was du brauchst
+## 🧾 Was du brauchst
 
 - Home Assistant OS (oder Supervised) auf **amd64 oder aarch64**.
 - Home Assistant per **Ethernet** angebunden. Der Adapter zum Flashen wird dem Host kurzzeitig weggenommen, also darf es nicht der sein, über den HA selbst läuft.
 - Einen übrigen **WLAN-Adapter mit AP-Modus**. Ein USB-Stick ist am einfachsten. Ich nutze einen Atheros AR9271 (`0cf3:9271`).
 - Das Gerät, das du flashen willst, in Reichweite, und Geduld.
 
-### Welche WLAN-Adapter könnten gehen?
+### 📡 Welche WLAN-Adapter könnten gehen?
 
 Die App kann nur nutzen, was der HAOS-Kernel mitbringt. Das sind die WLAN-Treiber, die HAOS für USB und SDIO baut (Stand 28. Oktober 2026, Kernel 6.18):
 
@@ -76,7 +76,7 @@ Die App kann nur nutzen, was der HAOS-Kernel mitbringt. Das sind die WLAN-Treibe
 
 Eingebautes PCIe-WLAN ist ebenfalls abgedeckt (Intel `iwlwifi`, Atheros, MediaTek, Realtek, ...). Aufgelistet heißt **nicht** getestet. Bisher hat nur der AR9271 etwas geflasht. Das interne Realtek RTL8822CE verbindet sich zwar, hatte aber oft zu wenig Signal. AP-Modus und die Übergabe in den Namespace hängen vom Treiber ab, die App prüft beides, bevor sie irgendetwas anfasst. Die vollständige Liste mit typischen Chips steht in [docs/wifi-compatibility.md](docs/wifi-compatibility.md) (englisch). Dein Adapter fehlt in der Testliste? Dann [melde ihn](#hilf-bei-der-kompatibilitätsliste).
 
-## Installation
+## 📦 Installation
 
 1. In Home Assistant **Einstellungen → Apps → App-Store** öffnen, dann **⋮ → Repositories** und `https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App` hinzufügen. (Ältere Versionen nennen das *Add-ons*.)
 2. **Beide** Apps installieren: **UnTuyaOS3** und den separaten **[WiFi App Helper](https://github.com/seb5594/Home-Assistant-WiFi-Helper-App)** aus dem Hauptkatalog. Zwei Apps sind Absicht, [hier steht warum](docs/architecture.md#why-two-apps) (englisch).
@@ -87,7 +87,7 @@ Die Oberfläche beginnt mit einer Karte *Wi-Fi Helper*, die dir sagt, was fehlt:
 
 Beide Apps starten absichtlich nur manuell. Bitte keinen Watchdog einrichten, der sie mitten im Flashen neu startet. Aktualisiere beide Apps gemeinsam.
 
-## Ein Gerät flashen
+## 🔥 Ein Gerät flashen
 
 1. Das Gerät in den AP-Kopplungsmodus versetzen, meist erkennbar am langsamen Blinken.
 2. In der Web-Oberfläche **Start interactive session** drücken.
@@ -100,7 +100,7 @@ Das Schließen des Browsers bricht die Sitzung nicht ab, beim Wiederkommen wird 
 
 *Unconfirmed* heißt: Alle Bytes wurden gesendet, aber das Gerät hat nie „fertig“ gemeldet. Such nach einem Kickstart-WLAN, bevor du irgendetwas anderes probierst.
 
-## Wenn etwas nicht klappt
+## 🛠️ Wenn etwas nicht klappt
 
 - **Kein Adapter in der Liste.** Der Grund steht unter dem Dropdown. Typisch: verbunden, in Benutzung, blockiert oder kein AP-Modus.
 - **USB-Stick am Bus, aber keine Schnittstelle.** Es fehlt der Host-Treiber oder dessen Firmware. Direkt am Rechner einstecken, *Refresh adapters* drücken, im Host-Log von Home Assistant nach `ath9k_htc` oder Firmware-Fehlern schauen. Die Apps können keine Treiber installieren.
@@ -108,19 +108,19 @@ Das Schließen des Browsers bricht die Sitzung nicht ab, beim Wiederkommen wird 
 - **Gerät antwortet `0x0C` statt `0x16`.** WLAN und DHCP sind in Ordnung, aber diese Firmware spricht nicht das erwartete Protokoll. Die App hält absichtlich an. Prüfe die Firmware-Version im [Kompatibilitäts-Wiki](https://github.com/tuya-cloudcutter/UnTuyaOS3/wiki/Device-Compatibility) des Originalprojekts.
 - **Alles andere.** Lies den *Log*-Tab beider Apps und schau in [How it works](docs/how-it-works.md) (englisch).
 
-## Hilf bei der Kompatibilitätsliste
+## 📈 Hilf bei der Kompatibilitätsliste
 
 Welche Geräte, Chips und Adapter funktionieren, weiß man nur, weil Leute es ausprobieren. Wenn du etwas geflasht hast (oder daran gescheitert bist), sag es mir. Der Button **Report a device** unten in der Web-Oberfläche öffnet ein Formular, in dem App-Version und Adapter schon eingetragen sind. Du kannst das [Formular auch direkt öffnen](https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/issues/new?template=device-report.yml). Fehlschläge sind genauso nützlich wie Erfolge. Bitte lass Schlüssel, UUIDs und Geräte-IDs weg, das Issue ist öffentlich.
 
-## Sicherheit in Kürze
+## 🔒 Sicherheit in Kürze
 
 Die Haupt-App mit Web-Oberfläche und den Upstream-Skripten läuft in einem isolierten Netzwerk-Namespace und sieht nur die eine Funkeinheit, die sie bekommen hat. Der Helper ist der einzige Teil im Host-Netzwerk. Er hat keinen Webserver und dient nur dazu, Funkeinheiten hinein- und herauszubewegen. Beide sprechen über einen lokalen Socket, nachdem sie bewiesen haben, dass sie dasselbe Geheimnis kennen. Nichts davon hat Zugriff auf deine Home-Assistant-Konfiguration, den Docker-Socket oder die Supervisor-API. Die Einzelheiten, auch was der Helper trotzdem kann, stehen in [docs/architecture.md](docs/architecture.md) (englisch). AppArmor bitte nicht deaktivieren.
 
-## Am Original dranbleiben
+## 🔄 Am Original dranbleiben
 
 Gepinnte Upstream-Revision: [`2111458`](https://github.com/tuya-cloudcutter/UnTuyaOS3/commit/2111458225c269ddddf5353bf09a1e8f1096d959), also das Release v1.0.1 des Originalprojekts. Ein Workflow prüft täglich, ob UnTuyaOS3 etwas Neueres veröffentlicht hat, und öffnet dann einen Pull Request gegen `dev`. Veröffentlicht wird erst, wenn ich den Diff gelesen und getestet habe.
 
-## Mehr Dokumentation (englisch)
+## 📚 Mehr Dokumentation (englisch)
 
 - [How it works](docs/how-it-works.md): Adapter-Prüfung, WLAN-Verbindung, Firmware-Bibliothek, Logs und Wiederherstellung
 - [Architecture](docs/architecture.md): warum zwei Apps, Berechtigungen, Aufbau des Quellcodes
@@ -131,17 +131,17 @@ Gepinnte Upstream-Revision: [`2111458`](https://github.com/tuya-cloudcutter/UnTu
 
 Kein offizielles Home-Assistant- oder Tuya-Produkt. Tuya ist eine Marke ihres Inhabers. Icon und Logo hier sind meine eigene Grafik, nur das Orange ist eine Verbeugung vor der Marke. Die Upstream-Software und -Firmware behalten ihre eigenen Lizenzen.
 
-## Unterstützung
+## ☕ Unterstützung
 
 Alle meine Projekte entstehen in meiner Freizeit, aus Spaß an der Sache. Trotzdem stecken viel Zeit und Sorgfalt drin. Wenn dir meine Arbeit geholfen hat, freue ich mich über einen heißen Kaffee für die nächste schlaflose Nacht.
 
 [![PayPal](https://img.shields.io/static/v1?label=Support&message=PayPal&color=0070BA&logo=paypal&logoColor=white&style=for-the-badge)](https://paypal.me/seb5594) [![Buy me a beer](https://raw.githubusercontent.com/seb5594/Home-Assistant-Apps/473dc258f963096745aac327df54950eb9b59066/.github/assets/support-beer.svg)](https://buymeacoffee.com/seb5594)
 
-## Lizenz
+## ⚖️ Lizenz
 
 [MIT](LICENSE).
 
-## Eigenständige Repositories und Rückkehr zu 1.0.0
+## 🚚 Eigenständige Repositories und Rückkehr zu 1.0.0
 
 Diese Repository enthält wieder ausschließlich **UnTuyaOS3**, aktuell Version **1.0.1**. Der allgemeine [WiFi App Helper](https://github.com/seb5594/Home-Assistant-WiFi-Helper-App) und [Tuya Breaker](https://github.com/seb5594/Home-Assistant-Tuya-Breaker-App) haben eigene Repositories und unabhängige Versionen. Beide Apps aus dem [Hauptkatalog](https://github.com/seb5594/Home-Assistant-Apps) installieren. Der Helper besitzt die neue Kennung `wifi_helper` und ein allgemein benanntes privates Socket-Verzeichnis.
 
@@ -149,7 +149,7 @@ Vor dem Umzug alle Sitzungen beenden und die erfolgreiche Adapter-Rückgabe im a
 
 Home Assistant führt kein automatisches Downgrade von 1.2 Beta auf 1.0.1 durch. Konfiguration und private Firmware-Bibliothek mit der Backup-Oberfläche sichern und die eigenständige App bei Bedarf im App-Store neu installieren bzw. neu erstellen. Dasselbe private Kopplungsgeheimnis übernehmen. Keine Host-Befehle nötig. Der historische Git-Tag `v1.0.0` und dessen Release-Dateien bleiben erhalten; der aktuelle `dev`-Stand und der Katalog enthalten die neue Einzel-App-Struktur.
 
-## App-Store zeigt noch den alten Helper oder Versionsstand
+## 🗂️ App-Store zeigt noch den alten Helper oder Versionsstand
 
 Bestehende Home-Assistant-Checkouts verfolgen weiterhin den ursprünglich geklonten Branch. Der bisherige Branch `main` wird deshalb nach getesteten, veröffentlichten `dev`-Releases ohne Umschreiben der Historie nachgezogen. Danach im Menü des App-Stores nach Updates suchen. Das Löschen von GitHub-Container-Packages aktualisiert den Store-Katalog nicht. WiFi App Helper und Tuya Breaker über den Hauptkatalog installieren. Ein bereits installierter alter Helper kann separat erhalten bleiben: Erst alle Sitzungen beenden, Adapter-Rückgabe prüfen und ein Backup erstellen, dann die alte Installation entfernen. Bei ausstehender Wiederherstellung keine Recovery-Daten löschen.
 

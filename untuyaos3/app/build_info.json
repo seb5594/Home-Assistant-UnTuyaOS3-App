@@ -1,5 +1,5 @@
 {
-  "version": "1.0.4",
+  "version": "1.0.5",
   "protocol": 3,
   "upstream_revision": "14b56c3a69ece2230e424196f1c008534ca07fcd",
   "upstream_repository": "tuya-cloudcutter/UnTuyaOS3",
