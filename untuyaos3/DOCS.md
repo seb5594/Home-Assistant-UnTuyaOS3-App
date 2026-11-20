@@ -1,10 +1,10 @@
-# UnTuyaOS3
+# 🔓 UnTuyaOS3
 
-> **Flashing can brick your device. Use this at your own risk.** A finished transfer does not promise that the device boots afterwards. Only flash devices you can afford to lose.
+> ⚠️ **Flashing can brick your device. Use this at your own risk.** A finished transfer does not promise that the device boots afterwards. Only flash devices you can afford to lose.
 
 This app puts open firmware on **some** Tuya devices over Wi-Fi, using the [UnTuyaOS3](https://github.com/tuya-cloudcutter/UnTuyaOS3) exploit of the tuya-cloudcutter community. The exploit and the scripts are theirs, this app wraps them for Home Assistant. Not every device is affected: check the firmware version against the [compatibility list](https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/blob/main/docs/compatibility.md) and upstream's wiki first.
 
-## Setup
+## 🧷 Setup
 
 1. Install **WiFi App Helper** from the main Home Assistant Apps catalog. It is a separate app on purpose, because only it may touch the host network.
 2. Enter the **same** pairing secret (at least 32 characters) in the Configuration tab of both apps. The Web UI can generate one for you.
@@ -12,7 +12,7 @@ This app puts open firmware on **some** Tuya devices over Wi-Fi, using the [UnTu
 
 Keep Home Assistant on Ethernet and keep Protection mode and AppArmor on. The adapter you flash with is borrowed from the host and handed back afterwards.
 
-## Using it
+## 🖥️ Using it
 
 Choose a Wi-Fi adapter (a single eligible one is picked for you; press **Refresh adapters** after plugging in a USB stick), put the device into AP pairing mode, press **Start interactive session** and answer the script's numbered questions. Console and diagnostics update live, and your session keeps running if you close the page.
 

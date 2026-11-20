@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.5
+
+- Add a few fitting emojis to the Web UI's section labels, buttons and footer links, and to the
+  READMEs, the app store summary and the setup/usage guide, for quicker visual scanning.
+
 ## 1.0.4
 
 - Update UnTuyaOS3 to v1.0.2 (`14b56c3`). [Upstream changes](https://github.com/tuya-cloudcutter/UnTuyaOS3/compare/2111458...14b56c3).

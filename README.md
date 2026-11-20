@@ -36,7 +36,7 @@
 >
 > One of my own lamps went dark after a flash. It was running Kickstart, but I only found out because I went looking for its Wi-Fi. [The full story](docs/table-lamp-3225458.md) is worth reading before you start.
 
-## What is this?
+## 🤔 What is this?
 
 This repository contains only the **UnTuyaOS3** main app, version **1.0.2**. Its companion is now the independent [WiFi App Helper](https://github.com/seb5594/Home-Assistant-WiFi-Helper-App). For the combined CloudCutter/Lightleak workspace, see [Tuya Breaker](https://github.com/seb5594/Home-Assistant-Tuya-Breaker-App).
 
@@ -50,7 +50,7 @@ I build things like this in my spare time because I like my gadgets cloud-free. 
 
 > **Credit where it is due.** The exploit, the protocol work, the scripts and the bundled firmware come from the [tuya-cloudcutter](https://github.com/tuya-cloudcutter) community. UnTuyaOS3 is their project, and the original exploit was found by [kuba2k2](https://github.com/kuba2k2) of [LibreTiny](https://github.com/libretiny-eu/libretiny). All I did is wrap it for Home Assistant: web UI, isolated Wi-Fi handling, logs, uploads. Without their work none of this would exist, so please go and star their repository.
 
-## What has worked so far
+## ✅ What has worked so far
 
 These are my own devices, each with one firmware version. Details and the Wi-Fi adapters are in the [compatibility list](docs/compatibility.md).
 
@@ -63,18 +63,18 @@ These are my own devices, each with one firmware version. Details and the Wi-Fi 
 
 A flash has several stages that can each go wrong: exploit accepted, transfer complete, device confirms, new firmware boots, outputs work. The list keeps them apart. Kickstart is only a generic setup firmware, it does not know your lamp's pins until you configure it.
 
-## Ready-made firmware for Action devices
+## 🧰 Ready-made firmware for Action devices
 
 Flashing is only half the job: afterwards the device needs a firmware that knows its pins. For devices sold by the discounter Action (brands LSC Smart, Battletron and Eurodomest) I have built a [collection of prebuilt ESPHome firmware](https://gitea.seb5594.xyz/seb5594/Action_Battleton_Eurodomest_LSC-Smart-Custom-Firmware-Collection) and put it on my own Gitea. Download the image for your device there, upload it as a UG image in the Web UI's firmware library and flash it. It is only for devices from Action. Same warning as always: check that the device and firmware version match, and expect to risk the device.
 
-## What you need
+## 🧾 What you need
 
 - Home Assistant OS (or a Supervised install) on **amd64 or aarch64**.
 - Home Assistant connected over **Ethernet**. The adapter used for flashing is borrowed from the host for a while, so it must not be the one HA itself relies on.
 - A spare **Wi-Fi adapter with AP mode**. A USB stick is the easiest choice. The one I use is an Atheros AR9271 (`0cf3:9271`).
 - A device you want to flash, within reach, and patience.
 
-### Which Wi-Fi adapters might work?
+### 📡 Which Wi-Fi adapters might work?
 
 The app can only use what the HAOS kernel ships. These are the Wi-Fi drivers HAOS builds for USB and SDIO (checked 28 October 2026, kernel 6.18):
 
@@ -88,7 +88,7 @@ The app can only use what the HAOS kernel ships. These are the Wi-Fi drivers HAO
 
 Built-in PCIe Wi-Fi is covered too (Intel `iwlwifi`, Atheros, MediaTek, Realtek, ...). Listed does **not** mean tested. So far only the AR9271 has flashed anything; the internal Realtek RTL8822CE connects, but its signal was often too weak. AP mode and the namespace handover depend on the driver, and the app checks both before it touches anything. The whole list with typical chips is in [docs/wifi-compatibility.md](docs/wifi-compatibility.md). Your adapter is not on the tested list? Please [report it](#help-grow-the-compatibility-list).
 
-## Install
+## 📦 Install
 
 1. In Home Assistant open **Settings → Apps → App store**, then **⋮ → Repositories** and add `https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App`. (Older versions call these *Add-ons*.)
 2. Install **UnTuyaOS3** and the separate **[WiFi App Helper](https://github.com/seb5594/Home-Assistant-WiFi-Helper-App)** from the [main catalog](https://github.com/seb5594/Home-Assistant-Apps). They are two apps on purpose, [here is why](docs/architecture.md#why-two-apps).
@@ -99,7 +99,7 @@ The Web UI starts with a *Wi-Fi Helper* card that tells you what is missing: hel
 
 Both apps start manually, on purpose. Please do not add a watchdog that restarts them while a flash is running. Use compatible helper API versions; app release numbers are independent.
 
-## Flashing a device
+## 🔥 Flashing a device
 
 1. Put the device into AP pairing mode. Usually that means a slow blink.
 2. Press **Start interactive session** in the Web UI.
@@ -112,7 +112,7 @@ Closing the browser does not cancel the session. When you come back the recent o
 
 *Unconfirmed* means every byte went out but the device never said it was done. Look for a Kickstart Wi-Fi network before you try anything else.
 
-## When something does not work
+## 🛠️ When something does not work
 
 - **No adapter in the list.** The reason is printed under the dropdown. Typical ones: it is connected, in use, blocked, or has no AP mode.
 - **USB stick on the bus but no interface.** The host driver or its firmware is missing. Plug it straight into the machine, press *Refresh adapters*, check Home Assistant's host log for `ath9k_htc` or firmware errors. The apps cannot install drivers.
@@ -120,19 +120,19 @@ Closing the browser does not cancel the session. When you come back the recent o
 - **Device answers `0x0C` instead of `0x16`.** Wi-Fi and DHCP are fine, but this firmware does not speak the expected protocol. The app stops on purpose. Check the firmware version against upstream's [compatibility wiki](https://github.com/tuya-cloudcutter/UnTuyaOS3/wiki/Device-Compatibility).
 - **Anything else.** Read the *Log* tab of both apps, and have a look at [how it works](docs/how-it-works.md).
 
-## Help grow the compatibility list
+## 📈 Help grow the compatibility list
 
 Which devices, chips and adapters work is only known because people try them. If you flashed (or failed to flash) something, tell me. The **Report a device** button at the bottom of the Web UI opens a form with your app version and adapter already filled in. You can also [open the form directly](https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App/issues/new?template=device-report.yml). Failures are as useful as successes. Please leave keys, UUIDs and device IDs out, the issue is public.
 
-## Security in short
+## 🔒 Security in short
 
 The main app, with the web UI and the upstream scripts, runs in an isolated network namespace and only sees the one radio it was given. The helper is the only part on the host network. It has no web server and exists to move radios in and out. Both talk over a local socket after proving they share the secret. Nothing here has access to your Home Assistant configuration, the Docker socket or the Supervisor API. The details, including what the helper still can do, are in [docs/architecture.md](docs/architecture.md). Do not disable AppArmor.
 
-## Staying current with upstream
+## 🔄 Staying current with upstream
 
 Pinned upstream revision: [`2111458`](https://github.com/tuya-cloudcutter/UnTuyaOS3/commit/2111458225c269ddddf5353bf09a1e8f1096d959), which is upstream's release v1.0.1. A workflow checks every day whether UnTuyaOS3 published something newer and opens a pull request against `dev`. Nothing is published until I have read the diff and tested it.
 
-## More documentation
+## 📚 More documentation
 
 - [How it works](docs/how-it-works.md): adapter checks, Wi-Fi connection, firmware library, logs and recovery
 - [Architecture](docs/architecture.md): why two apps, permissions, source layout
@@ -143,20 +143,20 @@ Pinned upstream revision: [`2111458`](https://github.com/tuya-cloudcutter/UnTuya
 
 Not an official Home Assistant or Tuya product. Tuya is a trademark of its owner; the icon and logo here are my own artwork, only the orange is a nod to the brand. Upstream software and firmware keep their own licenses.
 
-## Standalone migration and version reset
+## 🚚 Standalone migration and version reset
 
 The former three-app bundle is split into independent repositories. The standalone release line starts at **1.0.0**; the current release is **1.0.1**; the helper and Tuya Breaker use their own versions and retain API protocol 3 compatibility. The new helper has slug `wifi_helper` and a generic private socket directory. Follow its [migration guide](https://github.com/seb5594/Home-Assistant-WiFi-Helper-App/blob/dev/README.md#migration-from-anti-tuya-wifi-helper) and complete recovery with the old helper before removing it.
 
 Home Assistant does not automatically downgrade an installed 1.2 beta to 1.0.1. Back up this app's configuration and private firmware library using Home Assistant's backup UI, then use the App Store to reinstall/rebuild the standalone app when necessary. Keep the same pairing secret. No host terminal is required. The original historical `v1.0.0` Git tag and release assets are preserved; the current `dev` source and catalog contain this standalone layout.
 
-## Store still shows the previous companion or version
+## 🗂️ Store still shows the previous companion or version
 
 Existing Home Assistant repository checkouts keep following the branch they originally cloned. The legacy `main` branch is maintained as a fast-forward mirror of tested, published `dev` releases so these installations also receive the standalone app. Refresh the App Store from its menu after a release. GitHub container-package deletion does not refresh the store catalog. Use the main Home Assistant Apps catalog for WiFi App Helper and Tuya Breaker. An already installed old helper may remain listed separately; stop all sessions, verify radio recovery and make a backup before removing that old installation. Never delete recovery data while an adapter lease is pending.
 
 For stale entries in the **main catalog** after the bundle split, follow [App Store checkout repair](https://github.com/seb5594/Home-Assistant-Apps/blob/main/docs/store-refresh.md). Re-adding the exact same catalog URL removes stale submodule checkouts; a normal store reload can leave them behind.
 
 <!-- support:begin (generated, shared text) -->
-## Say thanks
+## ☕ Say thanks
 
 All my projects are built in my spare time, just for the fun of it. Still, they take a lot of time and care, and many of the smart home gadgets I buy end up here because I want to make them cloud-free and smart-home ready. Every bit of support means a lot to me.
 
@@ -166,7 +166,7 @@ If my work helped you or turned out to be useful, show your appreciation with a 
 <!-- support:end -->
 
 <!-- license:begin (generated from the license file) -->
-## License
+## ⚖️ License
 
 [![license](https://img.shields.io/static/v1?label=license&message=MIT&color=5B6770&style=flat)](LICENSE)
 
