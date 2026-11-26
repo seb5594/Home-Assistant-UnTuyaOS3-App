@@ -22,7 +22,7 @@ import zipfile
 from journal import Journal
 from devices import Devices
 from links import render_page
-from protocol import validate_options
+from protocol import helper_address
 from request_body import RequestBodyError, read_body
 from runner import Runner
 
@@ -221,10 +221,10 @@ def main():
     try:
         options = json.loads((data / "options.json").read_text())
         try:
-            validate_options(options)
+            helper_address(options)
         except ValueError as exc:
-            # Keep the Web UI up: its helper card explains how to set the secret.
-            journal.emit("warning", f"{exc} The Web UI shows how to pair the apps.")
+            # Keep the Web UI up: its helper card explains how to fix the host name.
+            journal.emit("warning", f"{exc} The Web UI shows how to reach the helper.")
         timeout = options.get("run_timeout", 1800)
         if type(timeout) is not int or not 60 <= timeout <= 7200:
             raise ValueError("run_timeout must be 60..7200 seconds")

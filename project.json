@@ -1,6 +1,6 @@
 {
-  "version": "1.0.5",
-  "protocol": 3,
+  "version": "2026.11.26",
+  "protocol": 4,
   "base_image": "ghcr.io/seb5594/home-assistant-base-python:3.14-alpine3.24-2026.11.0",
   "upstream_repository": "tuya-cloudcutter/UnTuyaOS3",
   "upstream_revision": "14b56c3a69ece2230e424196f1c008534ca07fcd",
@@ -36,10 +36,10 @@
     ]
   },
   "common_options": {
-    "pairing_token": ""
+    "wifi_helper_host": "4c7fee11-wifi-helper"
   },
   "common_schema": {
-    "pairing_token": "password"
+    "wifi_helper_host": "str"
   },
   "apps": {
     "untuyaos3": {
@@ -76,9 +76,9 @@
   },
   "translations": {
     "en": {
-      "pairing_token": {
-        "name": "Pairing secret",
-        "description": "Enter the same private secret of at least 32 characters in both apps. Select Wi-Fi in the main app's Web UI."
+      "wifi_helper_host": {
+        "name": "WiFi App Helper host",
+        "description": "Home Assistant host name of the WiFi App Helper. The default fits the official app repository; use local-wifi-helper for a local install. No pairing secret is needed."
       },
       "run_timeout": {
         "name": "Session timeout",
@@ -86,9 +86,9 @@
       }
     },
     "de": {
-      "pairing_token": {
-        "name": "Kopplungsgeheimnis",
-        "description": "In beiden Apps dasselbe private Geheimnis mit mindestens 32 Zeichen eintragen. WLAN wird in der WebUI der Haupt-App ausgewählt."
+      "wifi_helper_host": {
+        "name": "WiFi-App-Helper-Host",
+        "description": "Home-Assistant-Hostname des WiFi App Helpers. Der Standard passt zum offiziellen App-Repository; bei lokaler Installation local-wifi-helper verwenden. Ein Kopplungsgeheimnis ist nicht nötig."
       },
       "run_timeout": {
         "name": "Zeitlimit der Sitzung",

@@ -1,8 +1,8 @@
 {
   "configuration": {
-    "pairing_token": {
-      "name": "Pairing secret",
-      "description": "Enter the same private secret of at least 32 characters in both apps. Select Wi-Fi in the main app's Web UI."
+    "wifi_helper_host": {
+      "name": "WiFi App Helper host",
+      "description": "Home Assistant host name of the WiFi App Helper. The default fits the official app repository; use local-wifi-helper for a local install. No pairing secret is needed."
     },
     "run_timeout": {
       "name": "Session timeout",

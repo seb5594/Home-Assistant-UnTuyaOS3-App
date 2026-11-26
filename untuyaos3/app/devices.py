@@ -1,4 +1,4 @@
-"""Select host radios through authenticated IPC; acquire one only when a session starts."""
+"""Select host radios through the WiFi App Helper; acquire one only when a session starts."""
 import json
 import os
 from pathlib import Path
@@ -11,11 +11,9 @@ from protocol import PROTOCOL_VERSION, SOCKET, validate_interface
 HELPER_MESSAGES = {
     "unknown": "Looking for the Wi-Fi Helper…",
     "ready": "Connected to the Wi-Fi Helper.",
-    "unreachable": "The Wi-Fi Helper is not running. Start it from its app page; this page notices it automatically.",
-    "not_configured": "No pairing secret is set yet. Generate one below, paste the same value into the Configuration "
-                      "tab of both apps and restart both.",
-    "pairing": "The helper rejected the pairing secret. Both apps need exactly the same value in their Configuration "
-               "tab. Restart both after changing it.",
+    "unreachable": "The Wi-Fi Helper is not reachable. Start it from its app page and check the helper host name in "
+                   "this app's Configuration (default 4c7fee11-wifi-helper). This page notices it automatically.",
+    "rejected": "The helper refused the request. Restart the helper and this app, then refresh the adapters.",
     "protocol": "The helper speaks a different protocol version. Use a compatible API protocol and restart the helper and client.",
 }
 # Runner states in which no session is using (or about to use) the radio.
@@ -84,7 +82,7 @@ class Devices:
 
     @staticmethod
     def _connected_helper(info):
-        """App versions are independent; successful mutual authentication already checked protocol 3."""
+        """App versions are independent; the SDK already compared the protocol numbers."""
         info = info if isinstance(info,dict) else {}
         if info.get('protocol',PROTOCOL_VERSION) != PROTOCOL_VERSION:
             return {'state':'protocol','version':info.get('version'),'message':HELPER_MESSAGES['protocol']}

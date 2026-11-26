@@ -6,4 +6,4 @@ UnTuyaOS3 provides the original interactive UnTuyaOS3 firmware menus in Home Ass
 
 📦 Install this app from the [Home Assistant Apps catalog](https://github.com/seb5594/Home-Assistant-Apps). Read the [setup and usage guide](DOCS.md) and [changelog](CHANGELOG.md) before starting.
 
-🛡️ Keep Protection mode and AppArmor enabled. Install the helper once, configure the same pairing secret, and run only one main app at a time. Adapter selection and all interactive steps happen in the Web UI.
+🛡️ Keep Protection mode and AppArmor enabled. Install the helper once, keep the default helper host name, and run only one main app at a time. Adapter selection and all interactive steps happen in the Web UI.

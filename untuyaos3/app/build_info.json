@@ -1,6 +1,6 @@
 {
-  "version": "1.0.5",
-  "protocol": 3,
+  "version": "2026.11.26",
+  "protocol": 4,
   "upstream_revision": "14b56c3a69ece2230e424196f1c008534ca07fcd",
   "upstream_repository": "tuya-cloudcutter/UnTuyaOS3",
   "repository_url": "https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App"

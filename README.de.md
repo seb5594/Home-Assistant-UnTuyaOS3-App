@@ -80,10 +80,10 @@ Eingebautes PCIe-WLAN ist ebenfalls abgedeckt (Intel `iwlwifi`, Atheros, MediaTe
 
 1. In Home Assistant **Einstellungen → Apps → App-Store** öffnen, dann **⋮ → Repositories** und `https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App` hinzufügen. (Ältere Versionen nennen das *Add-ons*.)
 2. **Beide** Apps installieren: **UnTuyaOS3** und den separaten **[WiFi App Helper](https://github.com/seb5594/Home-Assistant-WiFi-Helper-App)** aus dem Hauptkatalog. Zwei Apps sind Absicht, [hier steht warum](docs/architecture.md#why-two-apps) (englisch).
-3. Ein Kopplungsgeheimnis mit mindestens 32 Zeichen wählen und in den **Konfigurations**-Tabs beider Apps denselben Wert eintragen. Kein gutes zur Hand? Öffne zuerst die Web-Oberfläche der Haupt-App, drück auf **Generate pairing secret** und füge das Ergebnis in beide ein.
+3. Es gibt nichts zu koppeln: Die Haupt-App findet den Helper über seinen Hostnamen, beim genannten Katalog `4c7fee11-wifi-helper`. Nur wenn der Helper aus einem anderen Repository stammt, in der Konfiguration **WiFi-App-Helper-Host** ändern (z. B. `local-wifi-helper`).
 4. **Schutzmodus** und AppArmor angeschaltet lassen. Den Helper starten, im Log auf *Ready* warten, dann die Haupt-App starten und **Web-UI öffnen** drücken.
 
-Die Oberfläche beginnt mit einer Karte *Wi-Fi Helper*, die dir sagt, was fehlt: Helper läuft nicht, Geheimnisse stimmen nicht überein, Versionen passen nicht. Sie bemerkt den Helper, sobald er startet, die Reihenfolge ist also nicht kritisch. Nach dem Einstecken eines USB-Adapters **Refresh adapters** drücken.
+Die Oberfläche beginnt mit einer Karte *Wi-Fi Helper*, die dir sagt, was fehlt: Helper nicht erreichbar, Hostname falsch, Versionen passen nicht. Sie bemerkt den Helper, sobald er startet, die Reihenfolge ist also nicht kritisch. Nach dem Einstecken eines USB-Adapters **Refresh adapters** drücken.
 
 Beide Apps starten absichtlich nur manuell. Bitte keinen Watchdog einrichten, der sie mitten im Flashen neu startet. Aktualisiere beide Apps gemeinsam.
 
