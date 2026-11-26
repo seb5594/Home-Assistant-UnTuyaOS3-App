@@ -13,23 +13,28 @@ sys.path.insert(0, str(ROOT / "untuyaos3/app"))
 import devices
 import lease
 import links
-from protocol import APP_VERSION, BUILD_INFO, PairingFailed, ProtocolMismatch, SecretNotSet, PROTOCOL_VERSION, validate_options
+from protocol import APP_VERSION, BUILD_INFO, HelperRejected, ProtocolMismatch, PROTOCOL_VERSION
 
 
 class HelperStateTests(unittest.TestCase):
     def test_every_failure_has_its_own_state(self):
-        for error, state in ((SecretNotSet("x"), "not_configured"), (lease.HelperUnavailable("x"), "unreachable"),
-                             (PairingFailed("x"), "pairing"), (ProtocolMismatch("x"), "protocol"),
+        for error, state in ((lease.HelperUnavailable("x"), "unreachable"),
+                             (HelperRejected("x"), "rejected"), (ProtocolMismatch("x"), "protocol"),
                              (RuntimeError("x"), "error")):
             self.assertEqual(lease.helper_state(error), state)
 
-    def test_missing_or_short_secret_is_reported_as_not_configured(self):
-        for options in ({}, {"pairing_token": "short"}):
-            with self.assertRaises(SecretNotSet):
-                validate_options(options)
-        with self.assertRaises(lease.HelperUnavailable):
-            with patch.object(lease.socket.socket, "connect", side_effect=FileNotFoundError):
-                lease.connect({"pairing_token": "x" * 40}, "wlan0")
+    def test_unreachable_http_host_is_reported_as_unreachable(self):
+        with patch.object(lease.http.client.HTTPConnection, "request", side_effect=ConnectionRefusedError):
+            with self.assertRaises(lease.HelperUnavailable):
+                lease.inventory({})
+        with self.assertRaises(ValueError):
+            lease.inventory({"wifi_helper_host": "not a host"})
+
+    def test_missing_socket_after_a_ticket_is_reported_as_unreachable(self):
+        with patch.object(lease, "http_json", return_value={"ticket": "a" * 64}), \
+             patch.object(lease.socket.socket, "connect", side_effect=FileNotFoundError):
+            with self.assertRaises(lease.HelperUnavailable):
+                lease.connect({}, "lease", "wlan0")
 
 
 class DevicesHelperTests(unittest.TestCase):
@@ -66,7 +71,7 @@ class DevicesHelperTests(unittest.TestCase):
         self.assertEqual(self.devices.status()["helper"]["state"], "ready")
 
     def test_failures_become_readable_states(self):
-        for error, state in ((lease.HelperUnavailable("gone"), "unreachable"), (PairingFailed("secret"), "pairing")):
+        for error, state in ((lease.HelperUnavailable("gone"), "unreachable"), (HelperRejected("refused"), "rejected")):
             with patch.object(devices, "inventory", side_effect=error):
                 with self.assertRaises(type(error)):
                     self.devices.refresh()

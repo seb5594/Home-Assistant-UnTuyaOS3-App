@@ -95,8 +95,7 @@ const HELPER_STATES = {
   ready: ["Wi-Fi Helper connected", "connected", "ready"],
   outdated: ["Helper update needed", "update needed", "unconfirmed"],
   unreachable: ["Helper not running", "not running", "failed"],
-  not_configured: ["Pairing secret missing", "setup needed", "failed"],
-  pairing: ["Pairing secret mismatch", "mismatch", "failed"],
+  rejected: ["Helper refused the request", "refused", "failed"],
   protocol: ["Helper version mismatch", "mismatch", "failed"],
   error: ["Helper problem", "error", "failed"]
 };
@@ -116,13 +115,7 @@ function showHelper(helper = {}) {
   $("helper-message").textContent = helper.message || "";
   // A working helper needs no explanation; keep the card to one line.
   $("helper-body").hidden = state === "ready";
-  $("helper-steps").hidden = !["unknown", "unreachable", "not_configured"].includes(state);
-}
-// 24 random bytes as hex: 48 characters, comfortably above the 32 the apps require.
-function generateSecret() {
-  const bytes = new Uint8Array(24);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  $("helper-steps").hidden = !["unknown", "unreachable"].includes(state);
 }
 // Prefill the GitHub issue form with what the app already knows about the adapter.
 function updateReportLink(data) {
@@ -214,20 +207,6 @@ $("adapter-select").onchange = async () => {
   $("start").disabled = true;
   try { await api("api/adapters/select", {interface: selected}); await poll(); }
   catch (error) { adapterView = ""; notice(error.message, true); }
-};
-$("secret-generate").onclick = () => {
-  $("secret-value").textContent = generateSecret();
-  $("secret-box").hidden = false;
-};
-$("secret-copy").onclick = async () => {
-  try {
-    await navigator.clipboard.writeText($("secret-value").textContent);
-    notice("Pairing secret copied. Paste it into the Configuration tab of both apps.");
-  } catch (error) {
-    // Clipboard access can be blocked inside the Ingress frame; select the text instead.
-    window.getSelection().selectAllChildren($("secret-value"));
-    notice("Copying was blocked by the browser. The secret is selected; press Ctrl+C.", true);
-  }
 };
 $("clear-logs").onclick = async () => {
   $("clear-logs").disabled = true;

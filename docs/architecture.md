@@ -17,7 +17,7 @@ So the helper is the only part that sits on the host network (plus the D-Bus con
 
 **A bonus.** The isolated namespace is exactly what a future tool like tuya-cloudcutter would need as well. It runs its own DHCP, DNS and HTTP(S)/MQTT servers on well-known ports. Inside the app's own namespace they cannot collide with services on the host and they are not reachable from your LAN.
 
-Two apps cost some convenience, which is why the main app does a lot to hide it: it finds the helper by itself as soon as it starts, tells you in plain words what is missing (not running, wrong secret, version mismatch) and links to the helper's page. See the helper card at the top of the Web UI.
+Two apps cost some convenience, which is why the main app does a lot to hide it: it finds the helper by itself as soon as it starts, tells you in plain words what is missing (not reachable, wrong host name, version mismatch) and links to the helper's page. See the helper card at the top of the Web UI.
 
 ## The two apps at a glance
 
@@ -36,11 +36,9 @@ Two apps cost some convenience, which is why the main app does a lot to hide it:
 
 ## How the apps trust each other
 
-The apps talk over a Unix socket in `/share/wifi-helper-private/`. Namespace descriptors are passed with `SCM_RIGHTS`, which works only locally: a descriptor cannot travel over TCP or HTTP. Container names or DNS names are addresses, not credentials, so they play no role.
+The apps use two channels. The main app finds the helper by its host name (`4c7fee11-wifi-helper`) and asks its small HTTP API for the adapter list and for a ticket. The radio itself is handed over on a Unix socket in `/share/wifi-helper-private/`: namespace descriptors are passed with `SCM_RIGHTS`, which works only locally, a descriptor cannot travel over TCP or HTTP. The ticket is valid for 30 seconds, works once and is bound to one operation and one interface; the helper answers HTTP only for peers inside Home Assistant's internal network. Before any descriptor is accepted, the ticket has to be redeemed on the socket. When the helper hands a radio over it refuses its own host namespace as the destination. When the radio comes back, the helper briefly sends a read-only descriptor of its namespace to the authenticated app, which passes it to a fixed `iw` command for the leased radio and closes it again. Nobody ever enters the host namespace, and neither `setns`, host PID nor `SYS_ADMIN` is involved.
 
-Before any descriptor is accepted, both sides prove they know the pairing secret with a nonce-based HMAC challenge. The secret never crosses the socket, and the protocol version and the requested scope are part of the proof. When the helper hands a radio over it refuses its own host namespace as the destination. When the radio comes back, the helper briefly sends a read-only descriptor of its namespace to the authenticated app, which passes it to a fixed `iw` command for the leased radio and closes it again. Nobody ever enters the host namespace, and neither `setns`, host PID nor `SYS_ADMIN` is involved.
-
-A secret you choose yourself is the price of this. I did not want the helper to generate one and drop it into `/share`, because other apps that map `share` could read it. The Web UI has a button that creates a good random one for you.
+There is no shared secret any more, and that is a trade-off: any app that can reach the helper's HTTP port and maps `share` can ask for a radio, where earlier a secret that only the two apps knew was required. A ticket ties an HTTP request to one socket session, it is not a credential. Install only apps you trust next to the helper.
 
 The main app's web side is small on purpose: numeric menu choices only, Ingress requests only (`172.30.32.2`, forwarded headers do not count), a CSRF token for every change, output rendered as text. The DHCP hook configures only the selected interface and ignores DNS and default routes from the device. Global rfkill changes and upstream's own network-manager restore are switched off.
 

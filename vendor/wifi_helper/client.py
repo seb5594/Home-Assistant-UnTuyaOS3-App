@@ -4,40 +4,66 @@ The helper owns the host side of the handover (see wifi_helper/app/broker.py). T
 module is the client: it lists adapters, asks for one radio to be moved into this app's
 network namespace and gives it back when the session is over.
 """
+import http.client
+import json
 import os
 import socket
-import threading
 import subprocess
-import json
+import threading
 from .wifi import same_device, PreflightError, command
-from .protocol import (INVENTORY, SOCKET, PairingFailed, ProtocolMismatch, SecretNotSet,
-                      client_authenticate, receive, send, validate_interface, validate_options)
+from .protocol import (PROTOCOL_VERSION, SOCKET, HelperRejected, HelperUnavailable, ProtocolMismatch,
+                       client_handshake, helper_address, receive, send, validate_interface)
 
-
-class HelperUnavailable(RuntimeError):
-    """The helper's socket is missing or refuses connections (helper not running)."""
+HTTP_TIMEOUT = 15
 
 
 def helper_state(error):
     """Map a failed helper call to the state name the Web UI uses for its setup card."""
-    for kind, state in ((SecretNotSet, "not_configured"), (HelperUnavailable, "unreachable"),
-                        (PairingFailed, "pairing"), (ProtocolMismatch, "protocol")):
+    for kind, state in ((HelperUnavailable, "unreachable"), (HelperRejected, "rejected"),
+                        (ProtocolMismatch, "protocol")):
         if isinstance(error, kind):
             return state
     return "error"
 
 
-def connect(options, scope):
-    """Open an authenticated connection to the helper for one scope (an interface or INVENTORY)."""
-    _, token = validate_options(options)
+def http_json(options, method, path, body=None):
+    """Call the helper's HTTP API and return the decoded JSON object."""
+    host, port = helper_address(options)
+    connection = http.client.HTTPConnection(host, port, timeout=HTTP_TIMEOUT)
+    try:
+        payload = None if body is None else json.dumps({**body, "protocol": PROTOCOL_VERSION})
+        connection.request(method, path, payload, {"Content-Type": "application/json"} if payload else {})
+        response = connection.getresponse()
+        raw = response.read(1 << 20)
+    except (OSError, http.client.HTTPException) as exc:
+        raise HelperUnavailable(f"Wi-Fi Helper not reachable at {host}:{port}. Start it first and check the host name "
+                                "in this app's configuration") from exc
+    finally:
+        connection.close()
+    try:
+        message = json.loads(raw)
+    except ValueError:
+        message = {}
+    if response.status == 409:
+        raise ProtocolMismatch("Wi-Fi Helper protocol mismatch. Update both apps, then restart the helper and main app")
+    if response.status >= 400 or not isinstance(message, dict):
+        raise HelperRejected(message.get("error", f"Wi-Fi Helper answered HTTP {response.status}") if isinstance(message, dict)
+                             else f"Wi-Fi Helper answered HTTP {response.status}")
+    return message
+
+
+def connect(options, operation, interface):
+    """Ask the helper for a ticket over HTTP, then redeem it on the private socket."""
+    validate_interface(interface)
+    ticket = http_json(options, "POST", "/v1/tickets", {"operation": operation, "interface": interface}).get("ticket")
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
     sock.settimeout(45)
     try:
         try:
             sock.connect(SOCKET)
         except OSError as exc:
-            raise HelperUnavailable("Wi-Fi Helper unavailable. Start it first, then refresh adapters in this Web UI") from exc
-        client_authenticate(sock, scope, token)
+            raise HelperUnavailable("Wi-Fi Helper socket missing. Give this app the share mount and restart the helper") from exc
+        client_handshake(sock, ticket)
         return sock
     except BaseException:
         sock.close()
@@ -46,14 +72,12 @@ def connect(options, scope):
 
 def inventory(options):
     """Ask the helper which adapters and USB devices it can see on the host."""
-    with connect(options, INVENTORY) as sock:
-        send(sock, {"operation": "inventory"})
-        message, fds = receive(sock)
-        for fd in fds:
-            os.close(fd)
-        if fds or not isinstance(message.get("adapters"), list) or not isinstance(message.get("usb_devices"), list):
-            raise RuntimeError(message.get("error", "Invalid helper inventory response"))
-        return message
+    message = http_json(options, "GET", "/v1/inventory")
+    if message.get("helper", {}).get("protocol") != PROTOCOL_VERSION:
+        raise ProtocolMismatch("Wi-Fi Helper protocol mismatch. Update both apps, then restart the helper and main app")
+    if not isinstance(message.get("adapters"), list) or not isinstance(message.get("usb_devices"), list):
+        raise RuntimeError(message.get("error", "Invalid helper inventory response"))
+    return message
 
 
 class Lease:
@@ -66,7 +90,7 @@ class Lease:
     def __init__(self, options, journal, lost, interface):
         validate_interface(interface)
         self.options, self.interface, self.journal = options, interface, journal
-        self.sock = connect(options, interface)
+        self.sock = connect(options, "lease", interface)
         self.closed = threading.Event()
         assignment_unknown = False
         try:
@@ -127,7 +151,7 @@ class Lease:
         import fcntl
         self.closed.set()  # Intentional helper close must not shut down Ingress.
         try:
-            with connect(self.options, self.interface) as control:
+            with connect(self.options, "return", self.interface) as control:
                 send(control, {"operation": "return"})
                 message, fds = receive(control)
                 try:
@@ -211,12 +235,12 @@ class RadioLease:
 class Client:
     """Small public SDK: inventory, one explicit radio lease and safe return.
 
-    Applications must watch `lost` and shut down their container if it is set.
-    Sharing the secret grants radio-control authority; give it only to trusted apps.
+    ``host`` is the helper's Home Assistant host name (optionally ``host:port``). Applications
+    must watch `lost` and shut down their container if it is set.
     """
-    def __init__(self, secret, *, lost=None, log=None):
-        self.options = {'pairing_token': secret}
-        validate_options(self.options)
+    def __init__(self, host=None, *, lost=None, log=None):
+        self.options = {'wifi_helper_host': host or ''}
+        helper_address(self.options)
         self.lost = lost if lost is not None else threading.Event()
         self.log = _Log(log)
 

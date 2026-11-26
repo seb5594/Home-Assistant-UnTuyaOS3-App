@@ -114,9 +114,10 @@ class LeaseTests(unittest.TestCase):
         for choice in ("$(id)", "1\n2", "", None, "-1"):
             with self.subTest(choice=choice), self.assertRaises(ValueError):
                 runner.input(choice)
-        for options in ({}, {"interface": "wlan1", "pairing_token": "short"}):
+        for options in ({"wifi_helper_host": "http://evil"}, {"wifi_helper_host": "host:0"}, {"wifi_helper_host": "a b"}):
             with self.assertRaises(ValueError):
-                protocol.validate_options(options)
+                protocol.helper_address(options)
+        self.assertEqual(protocol.helper_address({}), ("4c7fee11-wifi-helper", 4817))
 
 
 class IngressTests(unittest.TestCase):

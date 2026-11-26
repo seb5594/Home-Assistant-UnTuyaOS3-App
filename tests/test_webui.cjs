@@ -61,31 +61,17 @@ function checkLargeBatch() {
 // The helper card walks a new user through setup and shrinks once everything works.
 function checkHelperCard() {
   const down = loadUi({state: "select_adapter", events: [], cursor: 0, generation: "g",
-    helper: {state: "unreachable", message: "The Wi-Fi Helper is not running.", version: null}});
+    helper: {state: "unreachable", message: "The Wi-Fi Helper is not reachable.", version: null}});
   const up = loadUi({state: "ready", events: [], cursor: 0, generation: "g",
     helper: {state: "ready", message: "Connected.", version: "1.0.0"}});
   return () => {
     assert.equal(down("helper-title").value, "Helper not running");
     assert.equal(down("helper-body").hidden, false);
     assert.equal(down("helper-steps").hidden, false);
-    assert.match(down("helper-message").value, /not running/);
+    assert.match(down("helper-message").value, /not reachable/);
     assert.equal(up("helper-title").value, "Wi-Fi Helper connected · v1.0.0");
     assert.equal(up("helper-body").hidden, true, "A working helper needs no explanation");
     console.log("PASS: helper card explains setup and collapses when connected");
-  };
-}
-
-// The generated pairing secret must be long enough for the apps and different every time.
-function checkSecretGenerator() {
-  const element = loadUi({state: "select_adapter", events: [], cursor: 0, generation: "g"});
-  return () => {
-    element("secret-generate").onclick();
-    const first = element("secret-value").value;
-    element("secret-generate").onclick();
-    assert.match(first, /^[0-9a-f]{48}$/);
-    assert.notEqual(element("secret-value").value, first);
-    assert.equal(element("secret-box").hidden, false);
-    console.log("PASS: pairing secret generator produces 48 random hex characters");
   };
 }
 
@@ -104,7 +90,7 @@ function checkReportLink() {
   };
 }
 
-const checks = [checkLargeBatch(), checkHelperCard(), checkSecretGenerator(), checkReportLink()];
+const checks = [checkLargeBatch(), checkHelperCard(), checkReportLink()];
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 async function checkSessionSafety() {
   const status = {state: "ready", selected_adapter: "wlan1", events: [], cursor: 0, generation: "g"};
