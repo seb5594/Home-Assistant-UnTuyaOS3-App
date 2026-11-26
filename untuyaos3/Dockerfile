@@ -13,7 +13,7 @@ COPY integration/patch_upstream.py /tmp/patch_upstream.py
 RUN python /tmp/patch_upstream.py /upstream
 
 FROM ${BUILD_FROM}
-ARG BUILD_VERSION=1.0.5
+ARG BUILD_VERSION=2026.11.26
 RUN apk add --no-cache bash iw iproute2 busybox tini wpa_supplicant
 COPY --from=build /opt/venv /opt/venv
 COPY --from=build /upstream /opt/untuyaos3

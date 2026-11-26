@@ -92,10 +92,10 @@ Built-in PCIe Wi-Fi is covered too (Intel `iwlwifi`, Atheros, MediaTek, Realtek,
 
 1. In Home Assistant open **Settings → Apps → App store**, then **⋮ → Repositories** and add `https://github.com/seb5594/Home-Assistant-UnTuyaOS3-App`. (Older versions call these *Add-ons*.)
 2. Install **UnTuyaOS3** and the separate **[WiFi App Helper](https://github.com/seb5594/Home-Assistant-WiFi-Helper-App)** from the [main catalog](https://github.com/seb5594/Home-Assistant-Apps). They are two apps on purpose, [here is why](docs/architecture.md#why-two-apps).
-3. Pick a pairing secret of at least 32 characters and enter the same one in the **Configuration** tab of both apps. Do not have a good one at hand? Open the main app's Web UI first, press **Generate pairing secret** and paste the result into both.
+3. Nothing to pair: the main app finds the helper by its host name, `4c7fee11-wifi-helper` for the catalog above. Only change **WiFi App Helper host** in its Configuration if you installed the helper from another repository (for example `local-wifi-helper`).
 4. Keep **Protection mode** and AppArmor switched on. Start the helper, wait for *Ready* in its log, then start the main app and press **Open Web UI**.
 
-The Web UI starts with a *Wi-Fi Helper* card that tells you what is missing: helper not running, secrets that differ, versions that do not match. It notices the helper as soon as it starts, so the order is not critical. After you plug in a USB adapter, press **Refresh adapters**.
+The Web UI starts with a *Wi-Fi Helper* card that tells you what is missing: helper not reachable, host name wrong, versions that do not match. It notices the helper as soon as it starts, so the order is not critical. After you plug in a USB adapter, press **Refresh adapters**.
 
 Both apps start manually, on purpose. Please do not add a watchdog that restarts them while a flash is running. Use compatible helper API versions; app release numbers are independent.
 
